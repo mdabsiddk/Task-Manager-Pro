@@ -36,16 +36,27 @@ function Write-Step([string]$Text) { Write-Host "[*] $Text" -ForegroundColor Cya
 
 if (-not (Test-Admin)) {
     Write-Host 'Task Manager Pro needs administrator permission to install. Please answer "Yes" to the Windows prompt.' -ForegroundColor Yellow
-    if ($PSCommandPath) {
-        $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"", '-KeepOpen')
-        if ($Package) { $arguments += @('-Package', "`"$Package`"") }
-    } else {
-        $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', "`$env:TMPRO_KEEP_OPEN='1'; irm '$ScriptUrl' | iex")
+    # Re-open this script as administrator from a FILE. (Windows security blocks an elevated
+    # "powershell -Command irm ... | iex", so when we were started that way, save ourselves first.)
+    $scriptFile = $PSCommandPath
+    if (-not $scriptFile) {
+        $scriptFile = Join-Path $env:TEMP 'TaskManagerPro-install.ps1'
+        try {
+            Invoke-WebRequest -Uri $ScriptUrl -OutFile $scriptFile -UseBasicParsing
+        } catch {
+            Write-Host "[X] Could not download the installer: $($_.Exception.Message)" -ForegroundColor Red
+            return
+        }
     }
+    $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$scriptFile`"", '-KeepOpen')
+    if ($Package) { $arguments += @('-Package', "`"$Package`"") }
     try {
         Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $arguments
+        Write-Host 'The installation continues in the new window.' -ForegroundColor Green
     } catch {
-        Write-Host 'Installation cancelled (administrator permission was not given).' -ForegroundColor Red
+        Write-Host "Installation did not start: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host 'If you clicked "No", run the command again and answer "Yes". Or download TaskManagerPro-Setup.exe from' -ForegroundColor Yellow
+        Write-Host "https://github.com/$Repo/releases/latest" -ForegroundColor Yellow
     }
     return
 }
@@ -118,7 +129,11 @@ try {
     }
 }
 
-if ($KeepOpen -or $env:TMPRO_KEEP_OPEN -eq '1') {
+# The temporary copy made for elevation is no longer needed.
+if ($PSCommandPath -and $PSCommandPath -eq (Join-Path $env:TEMP 'TaskManagerPro-install.ps1')) {
+    Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+}
+if ($KeepOpen) {
     # This window was opened just for the installation: keep it readable.
     Read-Host 'Press Enter to close'
 }

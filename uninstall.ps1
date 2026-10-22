@@ -25,15 +25,13 @@ if (-not (Test-Path -LiteralPath $Uninstaller)) {
 
 if (-not $isAdmin) {
     Write-Host 'Uninstalling needs administrator permission. Please answer "Yes" to the Windows prompt.' -ForegroundColor Yellow
-    $arguments = if ($PSCommandPath) {
-        @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"")
-    } else {
-        @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', "irm '$ScriptUrl' | iex")
-    }
+    # The installed uninstall.bat can be elevated directly: no script download involved.
     try {
-        Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList $arguments
+        Start-Process -FilePath $Uninstaller -Verb RunAs
+        Write-Host 'The uninstall continues in the new window.' -ForegroundColor Green
     } catch {
-        Write-Host 'Uninstall cancelled (administrator permission was not given).' -ForegroundColor Red
+        Write-Host "Uninstall did not start: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host 'If you clicked "No", run the command again and answer "Yes".' -ForegroundColor Yellow
     }
     return
 }
