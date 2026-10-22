@@ -33,15 +33,6 @@ namespace TaskManagerPro
         private const string TempPrefix = "TaskManagerPro-update-";
         private static readonly TimeSpan CheckEvery = TimeSpan.FromDays(7);
 
-        public static Version Current
-        {
-            get
-            {
-                Version v = Assembly.GetEntryAssembly().GetName().Version;
-                return new Version(v.Major, v.Minor, Math.Max(0, v.Build));
-            }
-        }
-
         /// <summary>Returns the newer version, or null when this one is the newest. Throws when offline.</summary>
         public static UpdateInfo Check()
         {
@@ -49,7 +40,7 @@ namespace TaskManagerPro
             var request = (HttpWebRequest)WebRequest.Create("https://github.com/" + Repo + "/releases/latest");
             request.AllowAutoRedirect = false;
             request.Method = "HEAD";
-            request.UserAgent = "TaskManagerPro-Updater/" + Current;
+            request.UserAgent = "TaskManagerPro-Updater/" + AppVersion.Current;
             request.Timeout = 20000;
             string location;
             using (var response = (HttpWebResponse)request.GetResponse())
@@ -64,7 +55,7 @@ namespace TaskManagerPro
             if (!Version.TryParse(tag.TrimStart('v', 'V'), out latest)) throw new InvalidOperationException("Unexpected release name: " + tag);
             latest = new Version(latest.Major, latest.Minor, Math.Max(0, latest.Build));
 
-            if (latest <= Current) return null;
+            if (latest <= AppVersion.Current) return null;
             return new UpdateInfo { Version = latest, Tag = tag, PageUrl = "https://github.com/" + Repo + "/releases/tag/" + tag };
         }
 
@@ -80,7 +71,7 @@ namespace TaskManagerPro
 
             using (var web = new WebClient())
             {
-                web.Headers[HttpRequestHeader.UserAgent] = "TaskManagerPro-Updater/" + Current;
+                web.Headers[HttpRequestHeader.UserAgent] = "TaskManagerPro-Updater/" + AppVersion.Current;
                 web.DownloadFile(baseUrl + "TaskManagerPro.zip", zip);
                 string sums = Encoding.UTF8.GetString(web.DownloadData(baseUrl + "SHA256SUMS.txt"));
                 string expected = null;
@@ -176,7 +167,7 @@ namespace TaskManagerPro
         public static bool Ask(IWin32Window owner, UpdateInfo update)
         {
             string text = string.Format("Task Manager Pro {0} is available (you have {1}).\n\nUpdate now? Your limits and settings are kept.\n\nWhat's new: {2}",
-                update.Version, Current, update.PageUrl);
+                update.Version, AppVersion.Current, update.PageUrl);
             if (owner != null)
                 return MessageBox.Show(owner, text, "Update available", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes;
             using (var top = new Form { TopMost = true, ShowInTaskbar = false, StartPosition = FormStartPosition.CenterScreen, Size = new Size(1, 1), Opacity = 0 })

@@ -48,7 +48,7 @@ namespace TaskManagerPro
             // ---- App ----
             var icon = new PictureBox { Image = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly().Location).ToBitmap(), SizeMode = PictureBoxSizeMode.Zoom, Bounds = new Rectangle(x, y, S(48), S(48)) };
             var name = new Label { Text = Program.AppName, Font = new Font("Segoe UI Semibold", 16f), AutoSize = true, Location = new Point(x + S(62), y - S(2)) };
-            var version = new Label { Text = "Version " + Updater.Current + "  ·  free and open source (MIT License)", ForeColor = p.SubText, AutoSize = true, Location = new Point(x + S(64), y + S(30)) };
+            var version = new Label { Text = "Version " + AppVersion.Current + "  ·  free and open source (MIT License)", ForeColor = p.SubText, AutoSize = true, Location = new Point(x + S(64), y + S(30)) };
             Controls.AddRange(new Control[] { icon, name, version });
             y += S(70);
 

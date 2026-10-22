@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.1 (2026-10-22)
+
+- **One place for the version:** the new `VERSION` file. The program file, About window, tray tip, updater, *Installed apps*, Setup.exe, release notes and the GitHub release all take the version from it.
+- **Releases publish themselves:** change `VERSION` (or run `tools\set-version.ps1 X.Y.Z`) and push to main. GitHub then creates the tag and the release. The release notes include this version's changelog.
+- The README shows the current version with a live badge, so the docs no longer hold a version number to update.
+
 ## 2.2.0 (2026-10-22)
 
 - **New About window** (••• → About Task Manager Pro):

@@ -1,7 +1,7 @@
-# Task Manager Pro v2.0
+# Task Manager Pro
 
 [![Build](https://github.com/mdabsiddk/Task-Manager-Pro/actions/workflows/build.yml/badge.svg)](https://github.com/mdabsiddk/Task-Manager-Pro/actions/workflows/build.yml)
-[![Latest release](https://img.shields.io/github/v/release/mdabsiddk/Task-Manager-Pro?label=release)](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/mdabsiddk/Task-Manager-Pro?label=version)](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/mdabsiddk/Task-Manager-Pro/total?label=downloads&color=blue)](https://github.com/mdabsiddk/Task-Manager-Pro/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4)](#-যা-যা-লাগবে)
@@ -209,15 +209,14 @@ Test-Path "$env:ProgramFiles\TaskManagerPro"
 
 ## 🚀 নতুন ভার্সন প্রকাশ (মেইনটেইনারদের জন্য)
 
-1. `src\AssemblyInfo.cs`-এ ভার্সন বাড়ান। ইনস্টলার নিজেই সেখান থেকে ভার্সন পড়ে নেয়।
-2. ট্যাগ পুশ করুন:
+ভার্সন নম্বর থাকে **শুধু একটি জায়গায়: রুট ফোল্ডারের [`VERSION`](VERSION) ফাইলে।** সফটওয়্যার (About, ট্রে, আপডেট), Setup.exe, *Installed apps*, GitHub Release ও README-র ব্যাজ সবাই এখান থেকেই ভার্সন নেয়।
+
+1. নতুন ভার্সন সেট করুন (এতে `CHANGELOG.md`-এ একটি শিরোনামও যোগ হয়):
    ```powershell
-   git tag v2.0.1
+   powershell -ExecutionPolicy Bypass -File .\tools\set-version.ps1 2.3.0
    ```
-   ```powershell
-   git push origin v2.0.1
-   ```
-3. **GitHub Actions** নিজে থেকেই `TaskManagerPro-Setup.exe`, `TaskManagerPro.zip` ও `SHA256SUMS.txt` বানিয়ে একটি নতুন Release প্রকাশ করবে। উপরের ডাউনলোড লিংক সবসময় সর্বশেষ ভার্সনেই যাবে।
+2. `CHANGELOG.md`-এ কী কী বদলেছে লিখুন।
+3. কমিট করে `main`-এ পুশ করুন। **GitHub Actions** নিজে থেকেই `v2.3.0` ট্যাগ বানিয়ে `TaskManagerPro-Setup.exe`, `TaskManagerPro.zip` ও `SHA256SUMS.txt` সহ নতুন Release প্রকাশ করবে। এরপর ইনস্টল করা সব কপি সাপ্তাহিক চেকে নিজে নিজেই আপডেট হয়ে যাবে।
 
 ---
 

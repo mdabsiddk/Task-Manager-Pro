@@ -1,7 +1,10 @@
-# Publishes a GitHub Release when a version tag is pushed:
+# Publishes a GitHub Release by itself when the version changes.
 #
-#   git tag v2.0.1
-#   git push origin v2.0.1
+# The version is set in one place only: the VERSION file. To publish a new version:
+#   1. change VERSION (or run:  .\tools\set-version.ps1 2.3.0) and describe it in CHANGELOG.md
+#   2. commit and push to main
+# This workflow then builds the files, creates the tag vX.Y.Z and publishes the release.
+# A push that leaves VERSION alone, or a version that is already released, publishes nothing.
 #
 # Assets: TaskManagerPro-Setup.exe, TaskManagerPro.zip, SHA256SUMS.txt.
 # Their names never change, so these links always point to the newest version:
@@ -11,10 +14,16 @@ name: Release
 
 on:
   push:
-    tags: ['v*.*.*']
+    branches: [main]
+    paths: ['VERSION']
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -22,18 +31,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build release assets
-        shell: pwsh
-        run: ./tools/make-release.ps1 -Version "${{ github.ref_name }}"
-
-      - name: Publish release
+      - name: Read VERSION
+        id: version
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "${{ github.ref_name }}"
+          $version = (Get-Content -Raw VERSION).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION must contain a version like 2.3.0 (got '$version')." }
+          gh release view "v$version" --repo "${{ github.repository }}" *> $null
+          $released = $LASTEXITCODE -eq 0
+          "tag=v$version" >> $env:GITHUB_OUTPUT
+          "released=$($released.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          if ($released) { Write-Host "::notice::v$version is already released. Nothing to publish." }
+          exit 0
+
+      - name: Build release assets
+        if: steps.version.outputs.released == 'false'
+        shell: pwsh
+        run: ./tools/make-release.ps1
+
+      - name: Publish release
+        if: steps.version.outputs.released == 'false'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ steps.version.outputs.tag }}"
           gh release create $tag `
             dist/TaskManagerPro-Setup.exe dist/TaskManagerPro.zip dist/SHA256SUMS.txt `
+            --target "${{ github.sha }}" `
             --title "Task Manager Pro $tag" `
             --notes-file dist/RELEASE_NOTES.md `
             --latest

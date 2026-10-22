@@ -6,13 +6,13 @@
       SHA256SUMS.txt             checksums (install.ps1 verifies the download with it)
       RELEASE_NOTES.md           text for the GitHub release page
 
+    The version comes from the VERSION file, the one place where it is set.
+
 .EXAMPLE
-    .\tools\make-release.ps1                # version from src\AssemblyInfo.cs
-    .\tools\make-release.ps1 -Version v2.0.0
+    .\tools\make-release.ps1
 
     Used by .github\workflows\release.yml; works the same on any Windows PC (no SDK needed).
 #>
-param([string]$Version)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -20,12 +20,8 @@ $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path $csc)) { $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe' }
 if (-not (Test-Path $csc)) { throw '.NET Framework 4.x C# compiler (csc.exe) not found.' }
 
-if (-not $Version) {
-    $info = Get-Content -Raw (Join-Path $root 'src\AssemblyInfo.cs')
-    $Version = [regex]::Match($info, 'AssemblyFileVersion\("(\d+\.\d+\.\d+)').Groups[1].Value
-}
-$Version = $Version.TrimStart('v', 'V')
-if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must look like 2.0.0 (got '$Version')." }
+$Version = (Get-Content -Raw (Join-Path $root 'VERSION')).Trim()
+if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw "The VERSION file must contain a version like 2.3.0 (got '$Version')." }
 Write-Host "== Task Manager Pro ${Version}: release build"
 
 # ---- 1. The program ----
@@ -90,12 +86,15 @@ $sums = foreach ($f in 'TaskManagerPro-Setup.exe', 'TaskManagerPro.zip') {
 }
 [IO.File]::WriteAllText((Join-Path $dist 'SHA256SUMS.txt'), (($sums -join "`n") + "`n"))
 
-# ---- 6. Release notes ----
+# ---- 6. Release notes, with this version's part of CHANGELOG.md ----
 $repo = 'mdabsiddk/Task-Manager-Pro'
+$changes = ''
+$section = [regex]::Match((Get-Content -Raw -Encoding UTF8 (Join-Path $root 'CHANGELOG.md')), "(?ms)^## $([regex]::Escape($Version))\b[^\n]*\n(.*?)(?=^## |\z)")
+if ($section.Success -and $section.Groups[1].Value.Trim()) { $changes = "### What's new`n`n" + $section.Groups[1].Value.Trim() + "`n`n" }
 @"
 ## Task Manager Pro $Version
 
-A Windows 11 style task manager that can limit how much **CPU, memory, disk and network** each app may use. Limits stay active after the app is closed.
+$($changes)A Windows 11 style task manager that can limit how much **CPU, memory, disk and network** each app may use. Limits stay active after the app is closed.
 
 **Free and open source** ([MIT License](https://github.com/$repo/blob/main/LICENSE)): no subscription, no fees.
 

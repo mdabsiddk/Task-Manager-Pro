@@ -23,7 +23,6 @@ namespace TaskManagerPro
         private const int TrimEveryMs = 5 * 60 * 1000;
 
         private readonly string exePath = Assembly.GetEntryAssembly().Location;
-        private readonly string version = Assembly.GetExecutingAssembly().GetName().Version.ToString(2);
         private readonly LimitController limits = new LimitController();
         private readonly ProcessSampler sampler = new ProcessSampler();
         private StatusChannel status;
@@ -503,7 +502,7 @@ namespace TaskManagerPro
                 : limits.Paused ? "Limits paused"
                 : count == 0 ? "No limits set"
                 : count == 1 ? "1 app limited" : count + " apps limited";
-            return "Task Manager Pro v" + version + "\n" + detail;
+            return "Task Manager Pro " + AppVersion.Text + "\n" + detail;
         }
 
         private void UpdateTrayTip()

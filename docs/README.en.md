@@ -1,4 +1,4 @@
-# Task Manager Pro v2.0 (English)
+# Task Manager Pro (English)
 
 > বাংলা সংক্ষিপ্ত গাইড: [README.md](../README.md)
 
@@ -12,7 +12,7 @@ Set a limit, close the window, and you're done. **Nothing has to keep running in
 
 | | |
 |---|---|
-| **Version** | 2.0.0 ([changelog](../CHANGELOG.md)) |
+| **Version** | [![Latest release](https://img.shields.io/github/v/release/mdabsiddk/Task-Manager-Pro?label=version)](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest) ([changelog](../CHANGELOG.md)) |
 | **Platform** | Windows 10 / 11 (Windows 8/8.1 work too) |
 | **Runtime** | .NET Framework 4.x. It ships with Windows, so there is nothing to install |
 | **License** | [MIT](../LICENSE): free for everyone, forever. No subscription, no fees |
@@ -131,9 +131,20 @@ With the PowerShell command, only step 4 appears. Checksums are in `SHA256SUMS.t
 - From **Smart Task Manager** (the previous name): the installer removes it and moves your limits over.
 
 ### Publishing a new version (maintainers)
-1. Raise the version in `src\AssemblyInfo.cs`.
-2. Run `git tag v2.0.1` and then `git push origin v2.0.1`.
-3. GitHub Actions builds `TaskManagerPro-Setup.exe`, `TaskManagerPro.zip` and `SHA256SUMS.txt` and publishes the release. The download links above always point to the newest one.
+The version number is written in **one place only: the [`VERSION`](../VERSION) file**. Everything else follows it:
+
+| Where the version shows | How it gets there |
+|---|---|
+| Program file, About window, tray tip, updater | `build.bat` stamps `VERSION` into `TaskManagerPro.exe`; the code reads it through `AppVersion` |
+| *Installed apps* in Settings | `install.bat` reads it from `TaskManagerPro.exe` |
+| `TaskManagerPro-Setup.exe`, zip, release notes | `tools\make-release.ps1` reads `VERSION` (and this version's part of `CHANGELOG.md`) |
+| Git tag and GitHub Release | `release.yml` runs when `VERSION` changes on `main` |
+| README | the version badge shows the newest release |
+
+To publish:
+1. `powershell -ExecutionPolicy Bypass -File .\tools\set-version.ps1 2.3.0` (writes `VERSION` and adds a `## 2.3.0` heading to `CHANGELOG.md`).
+2. Describe the changes under that heading.
+3. Commit and push to `main`. GitHub Actions creates the tag `v2.3.0`, builds `TaskManagerPro-Setup.exe`, `TaskManagerPro.zip` and `SHA256SUMS.txt` and publishes the release. Installed copies pick it up at their weekly update check.
 
 To build the same files locally, run `powershell -ExecutionPolicy Bypass -File .\tools\make-release.ps1` (the output goes to `dist\`).
 
@@ -281,6 +292,7 @@ Your limits are kept; click **Resume limits** to use them again.
 ```
 Task Manager Pro/
 ├── README.md              ← short user guide in Bengali (install / uninstall)
+├── VERSION                ← the version number: the only place it is set
 ├── CHANGELOG.md           ← version history
 ├── install.ps1            ← one-line installer from GitHub (irm … | iex)
 ├── uninstall.ps1          ← one-line uninstaller
@@ -291,15 +303,16 @@ Task Manager Pro/
 │   ├── Setup.cs           ← TaskManagerPro-Setup.exe: single-file installer (embedded package)
 │   └── setup.manifest
 ├── tools/
-│   └── make-release.ps1   ← builds dist\: Setup.exe, zip, SHA256SUMS.txt, release notes
+│   ├── make-release.ps1   ← builds dist\: Setup.exe, zip, SHA256SUMS.txt, release notes
+│   └── set-version.ps1    ← sets VERSION and adds a CHANGELOG heading
 ├── .github/workflows/
 │   ├── build.yml          ← builds every push / pull request
-│   └── release.yml        ← publishes a GitHub Release when a v*.*.* tag is pushed
+│   └── release.yml        ← publishes a GitHub Release when VERSION changes on main
 ├── assets/
 │   └── app.ico            ← application icon (16–256 px)
 ├── src/
 │   ├── Program.cs         ← entry point: window / engine / exit / release-all
-│   ├── AssemblyInfo.cs    ← version information
+│   ├── AssemblyInfo.cs    ← product, company, copyright (the version comes from VERSION)
 │   ├── app.manifest       ← DPI awareness, OS support, common controls
 │   ├── app.config         ← .NET runtime settings (low-memory GC)
 │   ├── Core/              ← shared by window and engine; mscorlib only (no WinForms)

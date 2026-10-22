@@ -228,11 +228,11 @@ namespace TaskManagerPro
                 if (update == null)
                 {
                     if (manual)
-                        MessageBox.Show(this, "You have the latest version (" + Updater.Current + ").", Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show(this, "You have the latest version (" + AppVersion.Current + ").", Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
                 pendingUpdate = update;
-                updateText.Text = "\u2B07  Task Manager Pro " + update.Version + " is available (you have " + Updater.Current + ").";
+                updateText.Text = "\u2B07  Task Manager Pro " + update.Version + " is available (you have " + AppVersion.Current + ").";
                 updateBar.Visible = true;
                 if (manual && Updater.Ask(this, update)) InstallUpdate(update);
             });

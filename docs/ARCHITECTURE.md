@@ -293,7 +293,7 @@ Steam|0|0|20|512
 csc -target:winexe -optimize+ -platform:anycpu
     -win32manifest:src\app.manifest -win32icon:assets\app.ico
     -r:System.dll -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll
-    -recurse:src\*.cs
+    -recurse:src\*.cs build\obj\Version.g.cs
 ```
 
 - The compiler supports **C# 5**, so these features can't be used:
@@ -303,6 +303,20 @@ csc -target:winexe -optimize+ -platform:anycpu
   - expression-bodied members
   - `out var`
 - `anycpu` makes the app run as 64-bit on 64-bit Windows. The ETW struct offsets assume x64; on 32-bit Windows the app falls back to polling and shows no per-process network usage.
+
+## Versioning
+
+The version number exists in one place: the `VERSION` file (`X.Y.Z`).
+
+- `build.bat` checks its format and writes `build\obj\Version.g.cs` with `AssemblyVersion` / `AssemblyFileVersion` (`X.Y.Z.0`) and `AssemblyInformationalVersion` (`X.Y.Z`). `src\AssemblyInfo.cs` has no version.
+- In code, `Core/AppVersion.cs` is the only reader: `AppVersion.Current` (a `Version`) and `AppVersion.Text`. The About window, the update bar, the updater's version compare and user agent, and the engine's tray tip use it.
+- `install.bat` reads the version from the exe's file version for *Installed apps* (`DisplayVersion`).
+- `tools\make-release.ps1` reads `VERSION` for the setup's file version, `README.txt` and the release notes, and copies this version's section of `CHANGELOG.md` into the notes.
+- `.github/workflows/release.yml` runs when `VERSION` changes on `main` (or by hand). If release `vX.Y.Z` does not exist yet, it builds the assets and creates the tag and the release on that commit; otherwise it does nothing.
+- The manifests' `assemblyIdentity version` is a fixed `1.0.0.0`; it names the manifest, not the app.
+- The README shows the version with a badge for the newest release, so the docs never hold a number to update.
+
+`tools\set-version.ps1 X.Y.Z` writes `VERSION` and adds a `## X.Y.Z (date)` heading to `CHANGELOG.md`.
 
 ## Verification (v2.0)
 
