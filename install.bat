@@ -113,7 +113,10 @@ start "" /wait "%INSTALL_DIR%\%EXE_NAME%" --register-updates
 echo [*] Registering in Installed apps...
 reg add "%UNINSTALL_KEY%" /v DisplayName /d "%APP_NAME%" /f >nul
 reg add "%UNINSTALL_KEY%" /v DisplayVersion /d "%APP_VERSION%" /f >nul
-reg add "%UNINSTALL_KEY%" /v Publisher /d "Task Manager Pro" /f >nul
+reg add "%UNINSTALL_KEY%" /v Publisher /d "Md. Abu Bakar" /f >nul
+reg add "%UNINSTALL_KEY%" /v URLInfoAbout /d "https://mdabsiddk.dev/" /f >nul
+reg add "%UNINSTALL_KEY%" /v HelpLink /d "https://github.com/mdabsiddk/Task-Manager-Pro" /f >nul
+reg add "%UNINSTALL_KEY%" /v URLUpdateInfo /d "https://github.com/mdabsiddk/Task-Manager-Pro/releases" /f >nul
 reg add "%UNINSTALL_KEY%" /v DisplayIcon /d "%INSTALL_DIR%\%EXE_NAME%" /f >nul
 reg add "%UNINSTALL_KEY%" /v InstallLocation /d "%INSTALL_DIR%" /f >nul
 reg add "%UNINSTALL_KEY%" /v UninstallString /d "\"%INSTALL_DIR%\uninstall.bat\"" /f >nul

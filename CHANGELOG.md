@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.0 (2026-10-22)
+
+- **New About window** (••• → About Task Manager Pro):
+  - version and license
+  - developer **Md. Abu Bakar**, with icon links to the website, email, GitHub, LinkedIn and Facebook
+  - links open in the browser with normal (not administrator) rights; each address is also shown as selectable text with a **Copy** button
+- **Developer signature** in the program and setup file details (Company / Copyright), in *Installed apps* (Publisher, support and update links), in LICENSE and in the README.
+
 ## 2.1.1 (2026-10-22)
 
 - **Updates:**

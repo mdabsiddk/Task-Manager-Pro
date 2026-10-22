@@ -1310,17 +1310,7 @@ namespace TaskManagerPro
 
         private void ShowAbout()
         {
-            Version v = Assembly.GetExecutingAssembly().GetName().Version;
-            MessageBox.Show(this,
-                Program.AppName + " v" + v.ToString(2) + "\n\n" +
-                "A lightweight task manager that can limit how much CPU, memory, disk and network each app may use.\n" +
-                "Free and open source (MIT License): https://github.com/mdabsiddk/Task-Manager-Pro\n\n" +
-                "Limits stay in place after you close this window. " +
-                (settings.BackgroundEngine
-                    ? "The background engine also applies the exact limits to apps you open later."
-                    : "Apps you open later start with lower priority; turn on \"Run in background\" for exact limits.") + "\n\n" +
-                "Limits: " + AppPaths.RulesFile + "\nSettings: " + AppPaths.SettingsFile + "\nLog: " + AppPaths.LogFile,
-                "About " + Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using (var about = new AboutDialog()) about.ShowDialog(this);
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)

@@ -427,3 +427,11 @@ In `%ProgramData%\TaskManagerPro\error.log`.
 - You may change it and share it, as long as the license and copyright notice are kept.
 - It is provided "as is", without warranty.
 
+---
+
+## Developer
+
+**Md. Abu Bakar**: [mdabsiddk.dev](https://mdabsiddk.dev/) · [mdabsiddk@gmail.com](mailto:mdabsiddk@gmail.com) · [GitHub](https://github.com/mdabsiddk) · [LinkedIn](https://www.linkedin.com/in/absiddk/) · [Facebook](https://www.facebook.com/mdabubakarpage/)
+
+The same links are in the app under **••• → About Task Manager Pro**.
+

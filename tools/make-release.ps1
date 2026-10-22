@@ -52,6 +52,7 @@ Uninstall:  Settings > Apps > Installed apps > Task Manager Pro > Uninstall
 Emergency:  Start menu > "Task Manager Pro - Restore all apps"
 
 Free and open source - MIT License (see LICENSE).
+Developer: Md. Abu Bakar - https://mdabsiddk.dev - mdabsiddk@gmail.com
 https://github.com/mdabsiddk/Task-Manager-Pro
 "@
 [IO.File]::WriteAllText((Join-Path $pkg 'README.txt'), ($readme -replace "`r?`n", "`r`n"))
@@ -66,7 +67,8 @@ using System.Reflection;
 [assembly: AssemblyTitle("Task Manager Pro Setup")]
 [assembly: AssemblyProduct("Task Manager Pro")]
 [assembly: AssemblyDescription("Installs Task Manager Pro")]
-[assembly: AssemblyCopyright("Copyright (c) 2026")]
+[assembly: AssemblyCompany("Md. Abu Bakar")]
+[assembly: AssemblyCopyright("Copyright (c) 2026 Md. Abu Bakar (mdabsiddk) - MIT License")]
 [assembly: AssemblyVersion("$Version.0")]
 [assembly: AssemblyFileVersion("$Version.0")]
 "@ | Set-Content -Path $versionFile -Encoding UTF8
@@ -118,6 +120,8 @@ irm https://raw.githubusercontent.com/$repo/main/uninstall.ps1 | iex
 ``````
 
 Requirements: Windows 10 / 11 (64-bit recommended). Nothing else to install.
+
+Developed by **Md. Abu Bakar**: [Website](https://mdabsiddk.dev/) · [GitHub](https://github.com/mdabsiddk) · [LinkedIn](https://www.linkedin.com/in/absiddk/) · [Facebook](https://www.facebook.com/mdabubakarpage/) · mdabsiddk@gmail.com
 "@ | Set-Content -Path (Join-Path $dist 'RELEASE_NOTES.md') -Encoding UTF8
 
 Write-Host "== Done:"

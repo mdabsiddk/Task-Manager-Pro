@@ -229,3 +229,21 @@ Test-Path "$env:ProgramFiles\TaskManagerPro"
 - সোর্স কোড পরিবর্তন করে নিজের মতো করে নেওয়া এবং অন্যকে দেওয়া যাবে। শুধু লাইসেন্স ও কপিরাইট নোটিশটি রেখে দিতে হবে।
 - সফটওয়্যারটি "যেমন আছে" (as is) দেওয়া হচ্ছে, কোনো ওয়ারেন্টি ছাড়া।
 
+---
+
+## 👨‍💻 ডেভেলপার
+
+**Md. Abu Bakar**
+
+| | |
+|---|---|
+| 🌐 ওয়েবসাইট | [mdabsiddk.dev](https://mdabsiddk.dev/) |
+| ✉️ ইমেইল | [mdabsiddk@gmail.com](mailto:mdabsiddk@gmail.com) |
+| 🐙 GitHub | [github.com/mdabsiddk](https://github.com/mdabsiddk) |
+| 💼 LinkedIn | [linkedin.com/in/absiddk](https://www.linkedin.com/in/absiddk/) |
+| 📘 Facebook | [facebook.com/mdabubakarpage](https://www.facebook.com/mdabubakarpage/) |
+
+অ্যাপের ভেতরেও **••• → About Task Manager Pro**-এ এই তথ্যগুলো দেখা যায়।
+
+<img src="docs/images/about-dark.png" alt="About Task Manager Pro" width="420">
+
