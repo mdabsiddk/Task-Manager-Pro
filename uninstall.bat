@@ -35,6 +35,7 @@ if exist "%INSTALL_DIR%\%EXE_NAME%" start "" /wait "%INSTALL_DIR%\%EXE_NAME%" --
 
 echo [*] Removing autostart...
 schtasks /Delete /TN "TaskManagerPro" /F >nul 2>&1
+schtasks /Delete /TN "TaskManagerPro Update" /F >nul 2>&1
 
 echo [*] Removing network limits (QoS policies)...
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^

@@ -5,6 +5,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("Task manager with per-app CPU, memory, disk and network limits")]
 [assembly: AssemblyProduct("Task Manager Pro")]
 [assembly: AssemblyCopyright("Copyright © 2026 mdabsiddk · MIT License · free for everyone")]
-[assembly: AssemblyVersion("2.0.2.0")]
-[assembly: AssemblyFileVersion("2.0.2.0")]
+[assembly: AssemblyVersion("2.1.0.0")]
+[assembly: AssemblyFileVersion("2.1.0.0")]
 [assembly: ComVisible(false)]

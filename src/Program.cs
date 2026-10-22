@@ -15,6 +15,8 @@ namespace TaskManagerPro
     ///   --autostart      used by the sign-in task: starts the engine if "Run in background" is on
     ///   --exit           closes Task Manager Pro: the window and the engine (limits stay in place)
     ///   --release-all    restores every limited app and removes all persistent limits (uninstaller)
+    ///   --update-check   weekly scheduled task: installs a newer GitHub release if there is one
+    ///   --register-updates  (installer) creates or removes the weekly update task per the settings
     ///   --restore-all    emergency: closes the window, restores every app and pauses all limits
     ///                    (Start menu: "Task Manager Pro - Restore all apps")
     /// This class must not touch WinForms types, so the engine never loads WinForms.
@@ -36,6 +38,8 @@ namespace TaskManagerPro
                 if (HasArg(args, "--exit")) return CloseAll();
                 if (HasArg(args, "--release-all")) return ReleaseAll();
                 if (HasArg(args, "--restore-all")) return RestoreAll(HasArg(args, "--quiet"));
+                if (HasArg(args, StartupManager.UpdateCheckArg)) return RunUpdateCheck();
+                if (HasArg(args, "--register-updates")) return RegisterUpdates();
                 return Launch();
             }
             catch (Exception ex)
@@ -136,6 +140,19 @@ namespace TaskManagerPro
         private static int RunUi()
         {
             return UiApp.Run();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static int RunUpdateCheck()
+        {
+            return Updater.RunScheduled();
+        }
+
+        private static int RegisterUpdates()
+        {
+            string exe = Assembly.GetEntryAssembly().Location;
+            bool ok = new AppSettings().AutoCheckUpdates ? StartupManager.EnableUpdateCheck(exe) : StartupManager.DisableUpdateCheck();
+            return ok ? 0 : 1;
         }
 
         private static int StopEngine()

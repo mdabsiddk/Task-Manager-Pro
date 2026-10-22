@@ -223,6 +223,19 @@ namespace TaskManagerPro
         public bool BackgroundEngine { get { return GetBool("BackgroundEngine", false); } set { SetBool("BackgroundEngine", value); } }
         public bool StartHiddenOnLogon { get { return GetBool("StartHiddenOnLogon", true); } set { SetBool("StartHiddenOnLogon", value); } }
         public bool GroupByType { get { return GetBool("GroupByType", true); } set { SetBool("GroupByType", value); } }
+        /// <summary>Weekly check on GitHub for a new version (scheduled task "TaskManagerPro Update").</summary>
+        public bool AutoCheckUpdates { get { return GetBool("AutoCheckUpdates", true); } set { SetBool("AutoCheckUpdates", value); } }
+        /// <summary>Off (default): a found update is installed right away. On: ask first.</summary>
+        public bool AskBeforeUpdating { get { return GetBool("AskBeforeUpdating", false); } set { SetBool("AskBeforeUpdating", value); } }
+        public DateTime LastUpdateCheckUtc
+        {
+            get
+            {
+                DateTime d;
+                return DateTime.TryParse(GetString("LastUpdateCheckUtc", ""), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out d) ? d : DateTime.MinValue;
+            }
+            set { SetString("LastUpdateCheckUtc", value.ToString("o", CultureInfo.InvariantCulture)); }
+        }
         public bool AlwaysOnTop { get { return GetBool("AlwaysOnTop", false); } set { SetBool("AlwaysOnTop", value); } }
         /// <summary>"System", "Light" or "Dark".</summary>
         public string Theme { get { return GetString("Theme", "System"); } set { SetString("Theme", value); } }

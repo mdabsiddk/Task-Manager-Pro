@@ -48,8 +48,25 @@ irm https://raw.githubusercontent.com/mdabsiddk/Task-Manager-Pro/main/install.ps
 | ⬇️ [**TaskManagerPro-Setup.exe**](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest/download/TaskManagerPro-Setup.exe) | ডাউনলোড করে ডাবল-ক্লিক করুন → **Yes** |
 | ⬇️ [**TaskManagerPro.zip**](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest/download/TaskManagerPro.zip) | Extract করুন → **`install.bat`**-এ ডাবল-ক্লিক → **Yes** |
 
-> ⚠️ ফাইলটি নতুন এবং কোড-সাইন করা নয়, তাই Windows SmartScreen সতর্কবার্তা দেখাতে পারে। তখন **More info → Run anyway** চাপুন।
-> সব ভার্সন ও checksum পাবেন [Releases](https://github.com/mdabsiddk/Task-Manager-Pro/releases) পেজে।
+সব ভার্সন ও checksum পাবেন [Releases](https://github.com/mdabsiddk/Task-Manager-Pro/releases) পেজে।
+
+### ⚠️ ইনস্টলের সময় যে স্ক্রিনগুলো আসবে
+
+| ধাপ | স্ক্রিনে যা দেখবেন | যা করবেন |
+|:-:|---|---|
+| 1 | ব্রাউজারে: *"isn't commonly downloaded"* | **Keep** |
+| 2 | **Windows protected your PC** | **More info** |
+| 3 | *App: TaskManagerPro-Setup.exe · Publisher: Unknown publisher* | **Run anyway** |
+| 4 | **User Account Control:** *Do you want to allow…?* | **Yes** |
+| 5 | কালো উইন্ডোতে `[SUCCESS]` | যেকোনো কী চাপুন |
+
+| ধাপ ২: **More info** চাপুন | ধাপ ৩: **Run anyway** চাপুন |
+|:-:|:-:|
+| ![Windows protected your PC: More info](docs/images/smartscreen-1.png) | ![Run anyway](docs/images/smartscreen-2.png) |
+
+> **কেন এই সতর্কবার্তা আসে?** নতুন এবং কোড-সাইন ছাড়া (*Unknown publisher*) প্রতিটি অ্যাপেই Windows এটি দেখায়। এটা ভাইরাসের সংকেত নয়।
+> সোর্স কোড এখানেই খোলা আছে, আর প্রতিটি ফাইল `SHA256SUMS.txt` দিয়ে যাচাই করা যায়।
+> PowerShell কমান্ড দিয়ে ইনস্টল করলে শুধু ধাপ ৪ (**Yes**) আসে।
 
 ### পদ্ধতি ৩: সোর্স কোড থেকে
 
@@ -72,6 +89,23 @@ Test-Path "$env:ProgramFiles\TaskManagerPro\TaskManagerPro.exe"
 - `C:\Program Files\TaskManagerPro`-এ কপি করে
 - Desktop ও Start menu-তে শর্টকাট বানায়
 - **Settings → Apps**-এ এন্ট্রি যোগ করে
+
+---
+
+## 🔄 আপডেট
+
+| | |
+|---|---|
+| **নিজে থেকে** | সপ্তাহে একবার (ইন্টারনেট থাকলে) GitHub-এ নতুন ভার্সন খোঁজে। **পেলে নিজেই আপডেট হয়, না পেলে কিছুই হয় না।** পিসি বন্ধ থাকলে পরের বার চালু হওয়ার পর খোঁজে। |
+| **নিজে চেক করতে** | **••• → Updates → Check for updates now** |
+| **নতুন ভার্সন থাকলে** | উইন্ডোর উপরে নীল বার দেখায় → **Update now** |
+| **আগে জিজ্ঞেস করুক** | **••• → Updates → Ask before updating** |
+| **স্বয়ংক্রিয় আপডেট বন্ধ** | **••• → Updates → Check for updates every week** (টিক তুলে দিন) |
+
+- আপডেট আসে শুধু এই রিপোর [Releases](https://github.com/mdabsiddk/Task-Manager-Pro/releases) থেকে, আর **SHA-256 checksum মিললেই** ইনস্টল হয়।
+- আপনার লিমিট ও সেটিংস থেকে যায়।
+- আপডেটের সময় আবার অনুমতি চাওয়া হয় না।
+- v2.0.x থেকে একবার হাতে আপডেট করতে হবে (উপরের ইনস্টল কমান্ড আবার চালান)। এরপর থেকে নিজে নিজেই আপডেট হবে।
 
 ---
 
@@ -112,6 +146,7 @@ Start-Process -FilePath "$env:ProgramFiles\TaskManagerPro\uninstall.bat" -Verb R
 **আনইনস্টলার যা করে:**
 - সব অ্যাপ আগের স্বাভাবিক অবস্থায় ফিরিয়ে দেয়
 - সব লিমিট, শর্টকাট ও প্রোগ্রাম ফাইল মুছে ফেলে
+- সাপ্তাহিক আপডেট চেকও বন্ধ করে দেয়
 - **সেভ করা লিমিট রাখবেন কিনা** জিজ্ঞেস করে: রাখতে **N**, মুছতে **Y** চাপুন
 
 মুছে গেছে কিনা দেখতে:

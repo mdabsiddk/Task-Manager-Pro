@@ -6,8 +6,16 @@
 ::  shortcuts and an "Installed apps" entry, then starts it.
 ::  Upgrades Smart Task Manager (the previous name) in place.
 ::  Just double-click: it asks for administrator permission.
+::
+::  install.bat /update [/reopen]   used by the built-in updater:
+::      no pauses; afterwards restarts the background engine (if it
+::      is turned on) and, with /reopen, the window.
 :: ============================================================
 setlocal EnableExtensions
+set "UPDATE_MODE="
+if /i "%~1"=="/update" set "UPDATE_MODE=1"
+set "REOPEN="
+if /i "%~2"=="/reopen" set "REOPEN=1"
 title Task Manager Pro - Installer
 color 0A
 
@@ -97,7 +105,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$r.WorkingDirectory = '%INSTALL_DIR%'; $r.IconLocation = '%INSTALL_DIR%\%EXE_NAME%,0';" ^
   "$r.Description = 'Emergency: put every app back to normal and pause all limits'; $r.Save()"
 
-:: ---- 7. Installed apps entry ----
+:: ---- 7. Weekly update check (scheduled task; follows the user's setting) ----
+echo [*] Setting up the weekly update check...
+start "" /wait "%INSTALL_DIR%\%EXE_NAME%" --register-updates
+
+:: ---- 8. Installed apps entry ----
 echo [*] Registering in Installed apps...
 reg add "%UNINSTALL_KEY%" /v DisplayName /d "%APP_NAME%" /f >nul
 reg add "%UNINSTALL_KEY%" /v DisplayVersion /d "%APP_VERSION%" /f >nul
@@ -107,6 +119,8 @@ reg add "%UNINSTALL_KEY%" /v InstallLocation /d "%INSTALL_DIR%" /f >nul
 reg add "%UNINSTALL_KEY%" /v UninstallString /d "\"%INSTALL_DIR%\uninstall.bat\"" /f >nul
 reg add "%UNINSTALL_KEY%" /v NoModify /t REG_DWORD /d 1 /f >nul
 reg add "%UNINSTALL_KEY%" /v NoRepair /t REG_DWORD /d 1 /f >nul
+
+if defined UPDATE_MODE goto :update_done
 
 echo.
 echo [SUCCESS] %APP_NAME% has been installed.
@@ -122,11 +136,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 
 pause
 exit /b 0
 
+:update_done
+echo.
+echo [SUCCESS] %APP_NAME% has been updated to version %APP_VERSION%.
+:: Background engine again (only if "Run in background" is on), and the window if it was open.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%INSTALL_DIR%\%EXE_NAME%' -ArgumentList '--autostart' -WorkingDirectory '%INSTALL_DIR%'"
+if defined REOPEN powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%INSTALL_DIR%\%EXE_NAME%' -WorkingDirectory '%INSTALL_DIR%'"
+ping -n 4 127.0.0.1 >nul
+exit /b 0
+
 :fail
 color 0C
 echo.
 echo [X] Installation failed. See the messages above.
-pause
+if not defined UPDATE_MODE pause
 exit /b 1
 
 :: ------------------------------------------------------------

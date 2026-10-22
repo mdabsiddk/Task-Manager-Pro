@@ -246,6 +246,34 @@ Only visible rows are painted. Selection and expansion survive refreshes through
 - A custom `ToolStripProfessionalRenderer` themes the menus.
 - Icon glyphs come from *Segoe Fluent Icons* (Windows 11) or *Segoe MDL2 Assets* (Windows 10).
 
+## Updates (`UI/Updater.cs`)
+
+**Finding the newest version.** A `HEAD` request to `https://github.com/<repo>/releases/latest` without following redirects. The `Location` header ends in `/tag/vX.Y.Z`. This needs no API token and has no rate limit.
+
+**Downloading.**
+1. Download `TaskManagerPro.zip` and `SHA256SUMS.txt` from that release.
+2. Compare the zip's SHA-256 with the list. On a mismatch nothing is installed.
+3. Extract to `%TEMP%\TaskManagerPro-update-<guid>`. Folders older than a day are removed on the next update.
+
+**Installing.** The package's own `install.bat /update [/reopen]` runs in a separate `cmd` process, and the updating process exits so its exe can be replaced.
+- `/update` skips pauses.
+- `install.bat` closes the running window and engine (`--exit`) and retries the copy for up to ~10 s.
+- Afterwards it runs `--autostart`, which restarts the engine only if *Run in background* is on.
+- With `/reopen` it reopens the window.
+
+**Weekly check.** The scheduled task *TaskManagerPro Update* has these settings:
+- `CalendarTrigger` once a week, with a 2-hour random delay
+- `RunOnlyIfNetworkAvailable` and `StartWhenAvailable`, so a missed run happens at the next opportunity
+- `HighestAvailable`, so no UAC prompt appears
+- action: `TaskManagerPro.exe --update-check`
+
+`--update-check` then works like this:
+- offline: it logs and retries next week
+- no newer version: nothing happens
+- newer version: it installs, quietly unless the window is open, or asks first if *Ask before updating* is on
+
+The installer creates the task with `--register-updates`, following the *Check for updates every week* setting. The menu toggles it, and the uninstaller removes it. The window also checks at start when the last check is more than 7 days old, and shows a blue *Update now* bar.
+
 ## Files
 
 **`limits.cfg`** (UTF-8, compatible with Smart Task Manager):

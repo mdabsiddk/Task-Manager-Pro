@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.0 (2026-10-22)
+
+- **Updates:**
+  - **Automatic:** a weekly scheduled task, *TaskManagerPro Update*, checks GitHub when the internet is available. If a newer version exists it is installed (or the user is asked first, with *Ask before updating*); if not, nothing happens. Missed checks run at the next opportunity.
+  - **Manual:** **••• → Updates → Check for updates now**, and a blue *Update now* bar when a new version is available.
+  - **Safety:** downloads only from this repository's GitHub Releases, installed only if the SHA-256 checksum matches; limits and settings are kept.
+- **Install guide:** the browser, SmartScreen and UAC screens, step by step with pictures.
+
 ## 2.0.2 (2026-10-22)
 
 - **One-line install:**

@@ -93,7 +93,26 @@ It downloads the latest release, verifies its SHA-256 checksum, and installs it.
 - [TaskManagerPro-Setup.exe](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest/download/TaskManagerPro-Setup.exe): a single-file installer. Double-click it and answer Yes.
 - [TaskManagerPro.zip](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest/download/TaskManagerPro.zip): extract it and double-click `install.bat`.
 
-> The files are not code-signed, so SmartScreen may warn: click **More info → Run anyway**. Checksums are in `SHA256SUMS.txt` on the [Releases](https://github.com/mdabsiddk/Task-Manager-Pro/releases) page.
+**Screens you will see** (the files are new and not code-signed):
+
+| Step | Screen | Do this |
+|:-:|---|---|
+| 1 | Browser: *"isn't commonly downloaded"* | **Keep** |
+| 2 | **Windows protected your PC** | **More info** |
+| 3 | *Publisher: Unknown publisher* | **Run anyway** |
+| 4 | **User Account Control** | **Yes** |
+
+![More info](images/smartscreen-1.png) ![Run anyway](images/smartscreen-2.png)
+
+With the PowerShell command, only step 4 appears. Checksums are in `SHA256SUMS.txt` on the [Releases](https://github.com/mdabsiddk/Task-Manager-Pro/releases) page.
+
+### Updates
+- **Automatic:** once a week (only when the internet is available), Task Manager Pro checks GitHub. If there is a newer version it installs it; otherwise nothing happens. If the PC was off, it checks at the next opportunity.
+- **Manual:** **••• → Updates → Check for updates now**. A blue bar with **Update now** appears when a new version exists.
+- **Options:**
+  - *Ask before updating* (off by default)
+  - *Check for updates every week* (on by default)
+- **Safety:** updates come only from this repository's Releases, are installed only if their SHA-256 checksum matches, and keep your limits and settings.
 
 ### From the source folder
 

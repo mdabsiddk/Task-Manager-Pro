@@ -25,7 +25,7 @@ echo [*] Compiling Task Manager Pro...
     -out:"%OUT_EXE%" ^
     -win32manifest:"%ROOT%src\app.manifest" ^
     -win32icon:"%ROOT%assets\app.ico" ^
-    -r:System.dll -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll ^
+    -r:System.dll -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll -r:System.IO.Compression.dll -r:System.IO.Compression.FileSystem.dll ^
     -recurse:"%ROOT%src\*.cs"
 if errorlevel 1 (
     echo [X] Build failed.

@@ -48,14 +48,17 @@ namespace TaskManagerPro
 
         private System.Threading.Timer timer;
         private volatile bool closing, engineRunning;
-        private bool engineAskedUsToClose;
+        private bool engineAskedUsToClose, updating;
+        private UpdateInfo pendingUpdate;
         private StatusChannel statusReader;
         private Snapshot snapshot;
 
         private EventWaitHandle activateEvent, closeEvent, showEvent;
         private RegisteredWaitHandle activateWait, closeWait, showWait;
 
-        private Panel topBar, reviewBar;
+        private Panel topBar, reviewBar, updateBar;
+        private Label updateText;
+        private ToolbarButton btnUpdate;
         private Label reviewText;
         private ToolbarButton btnReview;
         private Label title;
@@ -80,10 +83,12 @@ namespace TaskManagerPro
 
             BuildTopBar();
             BuildReviewBar();
+            BuildUpdateBar();
             BuildList();
             BuildMenus();
             Controls.Add(list);
             Controls.Add(reviewBar);
+            Controls.Add(updateBar);
             Controls.Add(topBar);
 
             Theme.Changed += OnThemeChanged;
@@ -97,6 +102,7 @@ namespace TaskManagerPro
                 // This window enforces: undo any outside change to the registry / QoS limits.
                 ThreadPool.QueueUserWorkItem(delegate { limits.SyncPersistent(); });
             }
+            if (Updater.CheckIsDue(settings)) ThreadPool.QueueUserWorkItem(delegate { CheckForUpdates(false); });
 
             IntPtr unused = Handle; // BeginInvoke from the sampling thread needs a handle
             timer = new System.Threading.Timer(Tick, null, 0, Timeout.Infinite);
@@ -172,6 +178,105 @@ namespace TaskManagerPro
                 btnReview.Bounds = new Rectangle(reviewBar.Width - size.Width - S(16), (reviewBar.Height - size.Height) / 2, size.Width, size.Height);
                 reviewText.Bounds = new Rectangle(S(20), 0, Math.Max(0, btnReview.Left - S(32)), reviewBar.Height);
             };
+        }
+
+        // ---------------- Updates ----------------
+
+        /// <summary>Blue strip shown when a new version is available.</summary>
+        private void BuildUpdateBar()
+        {
+            updateBar = new Panel { Dock = DockStyle.Top, Height = S(44), Visible = false };
+            updateText = new Label { AutoSize = false, TextAlign = ContentAlignment.MiddleLeft };
+            btnUpdate = new ToolbarButton("\uE896", "Update now") { Font = Font };
+            btnUpdate.Click += delegate { if (pendingUpdate != null) InstallUpdate(pendingUpdate); };
+            updateBar.Controls.Add(updateText);
+            updateBar.Controls.Add(btnUpdate);
+            updateBar.Resize += delegate
+            {
+                Size size = btnUpdate.Measure();
+                btnUpdate.Bounds = new Rectangle(updateBar.Width - size.Width - S(16), (updateBar.Height - size.Height) / 2, size.Width, size.Height);
+                updateText.Bounds = new Rectangle(S(20), 0, Math.Max(0, btnUpdate.Left - S(32)), updateBar.Height);
+            };
+        }
+
+        /// <summary>Runs on a worker thread. <paramref name="manual"/>: the user asked, so always answer.</summary>
+        private void CheckForUpdates(bool manual)
+        {
+            UpdateInfo update;
+            try
+            {
+                update = Updater.Check();
+                settings.LastUpdateCheckUtc = DateTime.UtcNow;
+                settings.Save();
+            }
+            catch (Exception ex)
+            {
+                Log.Write("Update check failed: " + ex.Message);
+                if (manual)
+                {
+                    SafeInvoke(delegate
+                    {
+                        MessageBox.Show(this, "Could not check for updates. Is the internet connected?\n\n" + ex.Message,
+                            Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    });
+                }
+                return;
+            }
+
+            SafeInvoke(delegate
+            {
+                if (update == null)
+                {
+                    if (manual)
+                        MessageBox.Show(this, "You have the latest version (" + Updater.Current + ").", Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                pendingUpdate = update;
+                updateText.Text = "\u2B07  Task Manager Pro " + update.Version + " is available (you have " + Updater.Current + ").";
+                updateBar.Visible = true;
+                if (manual && Updater.Ask(this, update)) InstallUpdate(update);
+            });
+        }
+
+        private void InstallUpdate(UpdateInfo update)
+        {
+            btnUpdate.Enabled = false;
+            updateText.Text = "Downloading Task Manager Pro " + update.Version + "...";
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                try
+                {
+                    string installer = Updater.Download(update);
+                    SafeInvoke(delegate
+                    {
+                        // The installer replaces this program file: start it, then close this window.
+                        Updater.StartInstall(installer, true, true);
+                        updating = true;
+                        Close();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Update", ex);
+                    SafeInvoke(delegate
+                    {
+                        btnUpdate.Enabled = true;
+                        updateText.Text = "\u26A0  The update failed: " + ex.Message;
+                    });
+                }
+            });
+        }
+
+        private void ToggleWeeklyUpdates()
+        {
+            bool enable = !settings.AutoCheckUpdates;
+            settings.AutoCheckUpdates = enable;
+            settings.Save();
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                if (enable) StartupManager.EnableUpdateCheck(exePath);
+                else StartupManager.DisableUpdateCheck();
+            });
         }
 
         private void UpdateReviewBar()
@@ -329,6 +434,17 @@ namespace TaskManagerPro
             Add(moreMenu.Items, "Remove all limits...", false, RemoveAllLimits, null);
             moreMenu.Items.Add(new ToolStripSeparator());
             Add(moreMenu.Items, "Open data folder", false, OpenDataFolder, null);
+            var updates = new ToolStripMenuItem("Updates");
+            Add(updates.DropDownItems, "Check for updates now", false, delegate { ThreadPool.QueueUserWorkItem(delegate { CheckForUpdates(true); }); }, null);
+            updates.DropDownItems.Add(new ToolStripSeparator());
+            Add(updates.DropDownItems, "Check for updates every week", settings.AutoCheckUpdates, ToggleWeeklyUpdates,
+                "Once a week (when the internet is available) Task Manager Pro checks GitHub and installs a new version if there is one.");
+            Add(updates.DropDownItems, "Ask before updating", settings.AskBeforeUpdating, delegate
+            {
+                settings.AskBeforeUpdating = !settings.AskBeforeUpdating;
+                settings.Save();
+            }, "Off: a new version is installed automatically. On: you are asked first.");
+            moreMenu.Items.Add(updates);
             Add(moreMenu.Items, "About Task Manager Pro", false, ShowAbout, null);
             Add(moreMenu.Items, "Exit", false, Close, null);
             StyleMenu(moreMenu);
@@ -370,6 +486,9 @@ namespace TaskManagerPro
             topBar.BackColor = p.Window;
             title.ForeColor = p.Text;
             reviewBar.BackColor = p.IsDark ? Color.FromArgb(67, 53, 25) : Color.FromArgb(255, 244, 206);
+            updateBar.BackColor = p.IsDark ? Color.FromArgb(22, 50, 79) : Color.FromArgb(219, 236, 252);
+            updateText.ForeColor = p.Text;
+            btnUpdate.Invalidate();
             reviewText.ForeColor = p.Text;
             btnReview.Invalidate();
             Theme.ApplyTitleBar(this);
@@ -1225,7 +1344,7 @@ namespace TaskManagerPro
             if (!engineRunning)
             {
                 limits.Detach();
-                if (settings.BackgroundEngine && !engineAskedUsToClose && e.CloseReason != CloseReason.WindowsShutDown)
+                if (settings.BackgroundEngine && !engineAskedUsToClose && !updating && e.CloseReason != CloseReason.WindowsShutDown)
                 {
                     IntPtr h;
                     int pid;
