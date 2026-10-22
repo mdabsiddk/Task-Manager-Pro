@@ -116,7 +116,7 @@ It downloads the latest release, verifies its SHA-256 checksum, and installs it.
 2. Run `git tag v2.0.1` and then `git push origin v2.0.1`.
 3. GitHub Actions builds `TaskManagerPro-Setup.exe`, `TaskManagerPro.zip` and `SHA256SUMS.txt` and publishes the release. The download links above always point to the newest one.
 
-To build the same files locally, run `.\tools\make-release.ps1` (the output goes to `dist\`).
+To build the same files locally, run `powershell -ExecutionPolicy Bypass -File .\tools\make-release.ps1` (the output goes to `dist\`).
 
 ### Build only (developers)
 ```bash

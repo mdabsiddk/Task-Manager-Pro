@@ -42,14 +42,14 @@ if exist "%~dp0%EXE_NAME%" (
     set "SRC_DIR=%~dp0"
     echo [*] Using the included pre-built %EXE_NAME%.
     goto :have_program
-:: Version for "Installed apps", read from the program file itself (no number to update by hand).
-set "APP_VERSION=2.0"
-for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$v = (Get-Item -LiteralPath '%SRC_DIR%%EXE_NAME%').VersionInfo; '{0}.{1}.{2}' -f $v.FileMajorPart, $v.FileMinorPart, $v.FileBuildPart"`) do set "APP_VERSION=%%v"
-echo [*] Version %APP_VERSION%
 )
 call "%~dp0build.bat" /quiet
 if errorlevel 1 goto :fail
 :have_program
+:: Version for "Installed apps", read from the program file itself (no number to update by hand).
+set "APP_VERSION=2.0"
+for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$v = (Get-Item -LiteralPath '%SRC_DIR%%EXE_NAME%').VersionInfo; '{0}.{1}.{2}' -f $v.FileMajorPart, $v.FileMinorPart, $v.FileBuildPart"`) do set "APP_VERSION=%%v"
+echo [*] Version %APP_VERSION%
 
 :: ---- 2. Stop a running copy (limits stay on the apps; nothing is lost) ----
 if exist "%INSTALL_DIR%\%EXE_NAME%" (
@@ -118,7 +118,7 @@ echo   - Limits and settings: %DATA_DIR% ^(administrators only^)
 echo.
 echo Starting %APP_NAME%...
 :: Started through the shell so it doesn't inherit this console's handles.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%INSTALL_DIR%\%EXE_NAME%'"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%INSTALL_DIR%\%EXE_NAME%' -WorkingDirectory '%INSTALL_DIR%'"
 pause
 exit /b 0
 

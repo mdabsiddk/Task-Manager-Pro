@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.2 (2026-10-22)
+
+- **One-line install:**
+  - Windows security blocked the elevated `irm … | iex` relaunch ("Access is denied", no UAC prompt). `install.ps1` now saves itself to a temp file and re-opens that file as administrator.
+  - `uninstall.ps1` elevates the installed `uninstall.bat` directly.
+- **Installer:**
+  - The version shown in *Installed apps* was empty.
+  - The app is now started with the install folder as its working directory, so the temporary download folder can always be deleted.
+
 ## 2.0.1 (2026-10-22)
 
 - **License:** Task Manager Pro is released under the **MIT License**: free and open source for everyone, with no subscription and no fees. `LICENSE` is included in the downloads.

@@ -148,7 +148,7 @@ Test-Path "$env:ProgramFiles\TaskManagerPro"
 | Task Manager Pro বন্ধ (উইন্ডো + ইঞ্জিন; লিমিট থেকে যাবে) | `& "$env:ProgramFiles\TaskManagerPro\TaskManagerPro.exe" --exit` |
 | সব অ্যাপ স্বাভাবিক + লিমিট বিরতি | `& "$env:ProgramFiles\TaskManagerPro\TaskManagerPro.exe" --restore-all` |
 | শুধু বিল্ড (ডেভেলপারদের জন্য) | `Start-Process ".\build.bat" -Wait` |
-| রিলিজ ফাইল বানানো (Setup.exe + zip) | `.\tools\make-release.ps1` |
+| রিলিজ ফাইল বানানো (Setup.exe + zip) | `powershell -ExecutionPolicy Bypass -File .\tools\make-release.ps1` |
 
 ---
 
