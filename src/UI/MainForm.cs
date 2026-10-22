@@ -250,7 +250,7 @@ namespace TaskManagerPro
                     SafeInvoke(delegate
                     {
                         // The installer replaces this program file: start it, then close this window.
-                        Updater.StartInstall(installer, true, true);
+                        Updater.StartInstall(installer, true);
                         updating = true;
                         Close();
                     });

@@ -101,16 +101,17 @@ namespace TaskManagerPro
         }
 
         /// <summary>
-        /// Starts the installer and returns at once (the caller should exit so its file can be replaced).
-        /// <paramref name="visible"/>: show the installer's console. <paramref name="reopenWindow"/>: open
-        /// Task Manager Pro again when done.
+        /// Starts the installer in the background and returns at once (the caller should exit so its
+        /// file can be replaced). Its output goes to update.log in the admin-only data folder.
+        /// <paramref name="reopenWindow"/>: open Task Manager Pro again when done.
         /// </summary>
-        public static void StartInstall(string installBat, bool visible, bool reopenWindow)
+        public static void StartInstall(string installBat, bool reopenWindow)
         {
-            var psi = new ProcessStartInfo("cmd.exe", "/c \"\"" + installBat + "\" /update" + (reopenWindow ? " /reopen" : "") + " < nul\"")
+            string log = Path.Combine(AppPaths.DataDir, "update.log");
+            var psi = new ProcessStartInfo("cmd.exe", "/c \"\"" + installBat + "\" /update" + (reopenWindow ? " /reopen" : "") + " < nul > \"" + log + "\" 2>&1\"")
             {
                 UseShellExecute = false,
-                CreateNoWindow = !visible,
+                CreateNoWindow = true,
                 WorkingDirectory = Path.GetDirectoryName(installBat)
             };
             Process.Start(psi).Dispose();
@@ -162,8 +163,7 @@ namespace TaskManagerPro
             try
             {
                 string installer = Download(update);
-                // Visible when the user is involved; quiet when updating automatically.
-                StartInstall(installer, settings.AskBeforeUpdating || windowWasOpen, windowWasOpen);
+                StartInstall(installer, windowWasOpen);
             }
             catch (Exception ex)
             {

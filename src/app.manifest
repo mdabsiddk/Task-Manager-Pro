@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <assemblyIdentity version="2.1.0.0" name="TaskManagerPro.app" />
+  <assemblyIdentity version="2.1.1.0" name="TaskManagerPro.app" />
 
   <!-- asInvoker: a normal start first checks whether Task Manager Pro is already running (no
        prompt needed to bring it up) and only then relaunches itself elevated. The background engine

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.1 (2026-10-22)
+
+- **Updates:**
+  - The update installer now always runs in the background and writes its output to `update.log` in the data folder.
+  - An open window closes and reopens in the new version by itself.
+
 ## 2.1.0 (2026-10-22)
 
 - **Updates:**
