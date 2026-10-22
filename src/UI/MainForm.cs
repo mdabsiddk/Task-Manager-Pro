@@ -385,9 +385,11 @@ namespace TaskManagerPro
         private void FillMoreMenu()
         {
             moreMenu.Items.Clear();
-            Add(moreMenu.Items, "Run in background", settings.BackgroundEngine, ToggleBackgroundEngine,
-                "Keeps a small engine in the tray (starts with Windows) so the exact CPU and memory limits also\n" +
-                "apply to apps you open later. When off, nothing runs after you close this window.");
+            Add(moreMenu.Items, "Keep limits after closing and restart", settings.KeepLimits, ToggleKeepLimits,
+                "On: while limits are set, a small engine (a few MB, no CPU) runs in the tray. It starts with Windows,\n" +
+                "so the exact CPU and memory limits also apply to apps you open later and after a restart.\n" +
+                "Nothing runs when no limits are set. Off: after you close this window or restart, only the\n" +
+                "lower priority and the network limits stay.");
             moreMenu.Items.Add(new ToolStripSeparator());
             Add(moreMenu.Items, "Group by type", settings.GroupByType, delegate
             {
@@ -1176,10 +1178,10 @@ namespace TaskManagerPro
             RequestRefresh();
         }
 
-        private void ToggleBackgroundEngine()
+        private void ToggleKeepLimits()
         {
-            bool enable = !settings.BackgroundEngine;
-            settings.BackgroundEngine = enable;
+            bool enable = !settings.KeepLimits;
+            settings.KeepLimits = enable;
             settings.Save();
             ThreadPool.QueueUserWorkItem(delegate
             {
@@ -1334,7 +1336,7 @@ namespace TaskManagerPro
             if (!engineRunning)
             {
                 limits.Detach();
-                if (settings.BackgroundEngine && !engineAskedUsToClose && !updating && e.CloseReason != CloseReason.WindowsShutDown)
+                if (!engineAskedUsToClose && !updating && e.CloseReason != CloseReason.WindowsShutDown && Engine.Needed())
                 {
                     IntPtr h;
                     int pid;

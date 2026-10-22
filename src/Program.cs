@@ -12,11 +12,12 @@ namespace TaskManagerPro
     ///   (no arguments)   open the window (asks for administrator rights once if needed)
     ///   --ui             the window process (started by the line above or by the background engine)
     ///   --engine         the optional background engine (tray icon, applies limits to apps started later)
-    ///   --autostart      used by the sign-in task: starts the engine if "Run in background" is on
+    ///   --autostart      used by the sign-in task: starts the engine if limits are set (and "Keep
+    ///                    limits after closing and restart" is on), so limits survive a restart
     ///   --exit           closes Task Manager Pro: the window and the engine (limits stay in place)
     ///   --release-all    restores every limited app and removes all persistent limits (uninstaller)
     ///   --update-check   weekly scheduled task: installs a newer GitHub release if there is one
-    ///   --register-updates  (installer) creates or removes the weekly update task per the settings
+    ///   --register-updates  (installer) creates or removes the sign-in and weekly update tasks per the settings
     ///   --restore-all    emergency: closes the window, restores every app and pauses all limits
     ///                    (Start menu: "Task Manager Pro - Restore all apps")
     /// This class must not touch WinForms types, so the engine never loads WinForms.
@@ -34,7 +35,7 @@ namespace TaskManagerPro
                 if (HasArg(args, "--ui")) return RunUi();
                 if (HasArg(args, "--engine")) return Engine.Run(HasArg(args, "--show"));
                 if (HasArg(args, StartupManager.AutostartArg))
-                    return new AppSettings().BackgroundEngine ? Engine.Run(false) : 0;
+                    return Engine.Needed() ? Engine.Run(false) : 0;
                 if (HasArg(args, "--exit")) return CloseAll();
                 if (HasArg(args, "--release-all")) return ReleaseAll();
                 if (HasArg(args, "--restore-all")) return RestoreAll(HasArg(args, "--quiet"));
@@ -151,7 +152,9 @@ namespace TaskManagerPro
         private static int RegisterUpdates()
         {
             string exe = Assembly.GetEntryAssembly().Location;
-            bool ok = new AppSettings().AutoCheckUpdates ? StartupManager.EnableUpdateCheck(exe) : StartupManager.DisableUpdateCheck();
+            var settings = new AppSettings();
+            bool ok = settings.KeepLimits ? StartupManager.Enable(exe) : StartupManager.Disable();
+            ok &= settings.AutoCheckUpdates ? StartupManager.EnableUpdateCheck(exe) : StartupManager.DisableUpdateCheck();
             return ok ? 0 : 1;
         }
 

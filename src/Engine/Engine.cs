@@ -7,8 +7,9 @@ using System.Threading;
 namespace TaskManagerPro
 {
     /// <summary>
-    /// The optional background engine ("Run in background" setting). It keeps the exact CPU and memory
-    /// caps on apps that are started after the window was closed. It is event-driven: Windows tells it
+    /// The background engine. It runs only while limits are set ("Keep limits after closing and
+    /// restart", on by default): it starts at sign-in and when the window closes, and keeps the exact
+    /// CPU and memory caps on apps that start later or after a restart. It is event-driven: Windows tells it
     /// (via ETW) when a process starts, it applies the limits in a few milliseconds and goes back to
     /// sleep. No polling, no extra work when no limits are set. It uses only mscorlib + raw Win32
     /// (no WinForms, no System.dll) and opens the window as a separate "--ui" process on demand.
@@ -69,6 +70,26 @@ namespace TaskManagerPro
                 mutex.ReleaseMutex();
             }
             return 0;
+        }
+
+        /// <summary>
+        /// True when the engine should run: "Keep limits after closing and restart" is on and there are
+        /// limits to keep (also limits waiting for review, so the user is told about them).
+        /// </summary>
+        public static bool Needed()
+        {
+            try
+            {
+                if (!new AppSettings().KeepLimits || new LimitState().Paused) return false;
+                var rules = new RuleStore();
+                rules.Load();
+                return rules.Count > 0 || rules.NeedsReview;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Engine needed?", ex);
+                return false;
+            }
         }
 
         /// <summary>True if the background engine is running in this session.</summary>
@@ -277,6 +298,13 @@ namespace TaskManagerPro
             Apply();
             UpdateWatcher();
             PublishStatus();
+            StopIfNothingToKeep();
+        }
+
+        /// <summary>All limits removed and the window closed: nothing left to do, so don't stay in memory.</summary>
+        private void StopIfNothingToKeep()
+        {
+            if (uiProcess == IntPtr.Zero && limits.Rules.Count == 0 && !limits.Rules.NeedsReview) running = false;
         }
 
         private void SetPaused(bool paused)
@@ -326,12 +354,14 @@ namespace TaskManagerPro
             uiProcess = IntPtr.Zero;
             uiPid = 0;
             RebuildWaitHandles();
+            StopIfNothingToKeep();
+            if (!running) return;
 
             if (!limits.TrayHintShown)
             {
                 limits.TrayHintShown = true;
-                ShowBalloon("Task Manager Pro is running in the background",
-                    "Your limits are also applied to apps you open later. Click the icon to open Task Manager Pro.");
+                ShowBalloon("Task Manager Pro keeps your limits",
+                    "Your limits also apply to apps you open later and after a restart. Click the icon to open Task Manager Pro.");
             }
             NativeMethods.TrimWorkingSet();
         }

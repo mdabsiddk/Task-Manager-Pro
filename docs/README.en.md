@@ -42,7 +42,7 @@ Set a limit, close the window, and you're done. **Nothing has to keep running in
 ### The Task Manager you know
 - **Processes view** grouped like Task Manager: **Apps**, **Background processes** and **Windows processes**, each with a count.
 - **App trees with icons.** An app row such as *Google Chrome (13)* expands with ▸ to show every sub-process: renderers, helpers, and the *PowerShell* or *Console Window Host* an app started.
-  - Each app and each sub-process shows its real name and icon.
+  - Each app and each sub-process shows its real name and icon, the way Task Manager finds them: also for Store apps (WhatsApp, Photos, Settings, …) and protected services.
 - **Columns:** Name · Status · CPU · Memory · Disk · Network.
 - **Total usage in the column headers,** like Task Manager: *14% CPU*, *81% Memory*, *4% Disk*, *0% Network*.
 - **Heat-map cells:** the busier an app, the stronger its colour (yellow in the light theme, purple in the dark theme).
@@ -159,7 +159,7 @@ The output goes to `build\TaskManagerPro.exe` (plus `TaskManagerPro.exe.config`)
 |---|---|
 | *(none)* | Opens the window. If Task Manager Pro is already running, it is brought to the front |
 | `--engine` | Starts the background engine (tray icon) |
-| `--autostart` | Used by the sign-in task: starts the engine if *Run in background* is on |
+| `--autostart` | Used by the sign-in task: starts the engine if limits are set, so limits survive a restart |
 | `--exit` | Closes Task Manager Pro (window and background engine). Limits stay on the apps |
 | `--release-all` | Restores every limited app and removes all persistent limits (used by the uninstaller) |
 
@@ -207,7 +207,7 @@ Every limit uses a documented Windows mechanism. There are no drivers, no suspen
 
 - **Running apps:** the limits are kernel settings on the processes themselves, so they keep working after Task Manager Pro is closed, until the app exits. Child processes the app starts later are included automatically, because they join the same job.
 - **Apps started later:** Windows itself reads the app's *Image File Execution Options → PerfOptions* registry values every time the program starts. The network QoS policy also stays in Windows, even after a restart.
-- **Exact caps for apps started later:** turn on *Options → Run in background*. A small engine waits in the tray. Windows notifies it (through ETW) the moment a process starts; it applies the limits within about 0.6 seconds (measured) and goes back to sleep.
+- **Exact caps for apps started later and after a restart:** while limits are set, a small engine waits in the tray (*Options → Keep limits after closing and restart*, on by default). It starts with Windows. Windows notifies it (through ETW) the moment a process starts; it applies the limits within about 0.6 seconds (measured) and goes back to sleep.
 
 Technical details are in [docs/ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -218,9 +218,11 @@ Technical details are in [docs/ARCHITECTURE.md](ARCHITECTURE.md).
 - **Close (×):** the window process ends completely and frees all of its memory.
   - Your limits **stay applied** to the running apps.
   - Apps you open later start with lower priorities and the network limit.
-- **Options → Run in background** (off by default):
-  - After you close the window, a tiny engine stays in the tray. It also starts with Windows, without a UAC prompt.
+- **Options → Keep limits after closing and restart** (on by default):
+  - **While limits are set**, a tiny engine stays in the tray after you close the window. It also starts with Windows, without a UAC prompt, so your limits survive a restart.
   - It applies the exact CPU and memory caps to apps you open later.
+  - **With no limits set, nothing runs:** the engine isn't started, and it exits by itself when you remove the last limit.
+  - Turned off, only the lower priority and the network limit remain after you close the window or restart.
   - Measured: **0.2–0.6 MB of RAM with no limits set, and up to about 3.5 MB with limits**. It uses no CPU while idle and has no polling loop.
   - Tray icon: click to open the window. Right-click for *Pause all limits* and *Exit*.
 - **Limits are only undone by:** *Pause limits*, removing a limit, *Remove all limits*, or uninstalling.
@@ -333,7 +335,7 @@ Task Manager Pro/
 │   │   ├── StartupManager.cs    sign-in task for the background engine
 │   │   └── ProtectedProcesses.cs safety lists
 │   ├── Engine/
-│   │   └── Engine.cs            optional background engine (tray icon, raw Win32)
+│   │   └── Engine.cs            background engine while limits are set (tray icon, raw Win32)
 │   └── UI/
 │       ├── UiApp.cs             window process entry
 │       ├── MainForm.cs          the window: toolbar, menus, rows, actions
@@ -341,6 +343,7 @@ Task Manager Pro/
 │       ├── Controls.cs          toolbar buttons and search box
 │       ├── Theme.cs             light/dark palettes, system theme detection
 │       ├── ProcessMetadata.cs   app names (descriptions) and icons
+│       ├── PackagedApps.cs      names and logos of Store / MSIX apps
 │       ├── SystemMonitors.cs    network (ETW), disk active time, window detection
 │       └── ProcessActions.cs    End task, Properties, Open file location, Run new task
 ├── docs/
@@ -366,7 +369,7 @@ Task Manager Pro/
 | Program | `%ProgramFiles%\TaskManagerPro\` | `TaskManagerPro.exe`, `.config`, `uninstall.bat` |
 | Persistent priorities | `HKLM\…\Image File Execution Options\<app>.exe\PerfOptions` | Written only for limited apps |
 | Network limits | Windows QoS policies `TaskManagerPro_<app>` | Written only for apps with a network limit |
-| Background engine | Task Scheduler → `TaskManagerPro` | Only when *Run in background* is on |
+| Background engine | Task Scheduler → `TaskManagerPro` (at sign-in) | Starts the engine only when limits are set |
 
 The folder is readable and writable by administrators only.
 - The files are plain text, so you can back them up.
@@ -397,7 +400,10 @@ The uninstaller:
 Limiting other apps and ending their processes needs administrator rights, just like Task Manager. If Task Manager Pro is already running, the shortcut simply brings it to the front, with no prompt. The background engine starts at sign-in with no prompt.
 
 **I closed Task Manager Pro. Are my limits gone?**
-No. They stay on every running app until that app exits, and apps you open later start with lower priority. For the exact CPU and memory caps on newly opened apps too, turn on *Run in background*.
+No. They stay on every running app, and while limits are set a small engine keeps the exact CPU and memory caps on apps you open later.
+
+**Do my limits survive a restart?**
+Yes. At sign-in Windows starts the small engine (only when limits are set), which limits the running apps and every app you open afterwards.
 
 **The Status column says "Access denied".**
 Some processes (for example anti-virus) are protected by Windows itself. No task manager can change them.

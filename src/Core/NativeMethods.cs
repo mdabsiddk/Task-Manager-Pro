@@ -346,17 +346,92 @@ namespace TaskManagerPro
         public static string GetImagePath(int pid, long createTime)
         {
             IntPtr h = OpenProcessVerified(pid, createTime, 0);
-            if (h == IntPtr.Zero) return null;
+            if (h != IntPtr.Zero)
+            {
+                try
+                {
+                    var sb = new StringBuilder(1024);
+                    int size = sb.Capacity;
+                    if (QueryFullProcessImageName(h, 0, sb, ref size)) return sb.ToString(0, size);
+                }
+                finally
+                {
+                    CloseHandle(h);
+                }
+            }
+            // Protected processes (antivirus, services, drivers' helpers) can't be opened even as
+            // administrator. The kernel still tells anyone their image path, like Task Manager uses.
+            return DosPath(GetNtImagePath(pid));
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct SYSTEM_PROCESS_ID_INFORMATION
+        {
+            public IntPtr ProcessId;
+            public UNICODE_STRING ImageName;
+        }
+
+        [DllImport("ntdll.dll", EntryPoint = "NtQuerySystemInformation")]
+        private static extern uint NtQueryProcessIdInformation(int infoClass, ref SYSTEM_PROCESS_ID_INFORMATION info, int infoLength, out int returnLength);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        private static extern int QueryDosDevice(string deviceName, StringBuilder targetPath, int max);
+
+        /// <summary>Image path in kernel form (\Device\HarddiskVolume3\...) without opening the process.</summary>
+        private static string GetNtImagePath(int pid)
+        {
+            const int Size = 2048;
+            IntPtr buffer = Marshal.AllocHGlobal(Size);
             try
             {
-                var sb = new StringBuilder(1024);
-                int size = sb.Capacity;
-                return QueryFullProcessImageName(h, 0, sb, ref size) ? sb.ToString(0, size) : null;
+                var info = new SYSTEM_PROCESS_ID_INFORMATION { ProcessId = (IntPtr)pid };
+                info.ImageName.MaximumLength = Size;
+                info.ImageName.Buffer = buffer;
+                int returned;
+                if (NtQueryProcessIdInformation(88 /* SystemProcessIdInformation */, ref info, Marshal.SizeOf(typeof(SYSTEM_PROCESS_ID_INFORMATION)), out returned) != 0) return null;
+                return info.ImageName.Length == 0 ? null : Marshal.PtrToStringUni(buffer, info.ImageName.Length / 2);
             }
             finally
             {
-                CloseHandle(h);
+                Marshal.FreeHGlobal(buffer);
             }
+        }
+
+        private static string[] dosDevices; // "C:" , "\Device\HarddiskVolume3" pairs
+
+        /// <summary>\Device\HarddiskVolume3\x.exe → C:\x.exe; \Device\Mup\server\share → \\server\share.</summary>
+        private static string DosPath(string ntPath)
+        {
+            if (string.IsNullOrEmpty(ntPath) || !ntPath.StartsWith(@"\Device\", StringComparison.OrdinalIgnoreCase)) return null;
+            if (ntPath.StartsWith(@"\Device\Mup\", StringComparison.OrdinalIgnoreCase)) return @"\\" + ntPath.Substring(12);
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                string[] map = dosDevices;
+                if (map == null || attempt == 1) dosDevices = map = ReadDosDevices(); // a drive added since: read again
+                for (int i = 0; i < map.Length; i += 2)
+                {
+                    string device = map[i + 1];
+                    if (ntPath.Length > device.Length && ntPath[device.Length] == '\\' && ntPath.StartsWith(device, StringComparison.OrdinalIgnoreCase))
+                        return map[i] + ntPath.Substring(device.Length);
+                }
+            }
+            return null;
+        }
+
+        private static string[] ReadDosDevices()
+        {
+            var map = new System.Collections.Generic.List<string>();
+            var sb = new StringBuilder(512);
+            for (char letter = 'A'; letter <= 'Z'; letter++)
+            {
+                string drive = letter + ":";
+                if (QueryDosDevice(drive, sb, sb.Capacity) > 0)
+                {
+                    map.Add(drive);
+                    map.Add(sb.ToString());
+                }
+            }
+            return map.ToArray();
         }
 
         public static bool IsElevated()

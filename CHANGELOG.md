@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.3.0 (2026-10-23)
+
+- **Limits survive a restart.** While limits are set, the small engine (0.2–3.5 MB, no CPU while idle) starts at sign-in and when the window closes, so the exact CPU and memory caps also apply after a restart and to apps opened later. With no limits set nothing runs, and the engine exits by itself when the last limit is removed.
+  - Measured with a 20% CPU limit after a simulated restart: 22.3% (96.1% without the engine).
+  - The option is now **••• → Keep limits after closing and restart** (on by default; it replaces *Run in background*).
+- **App icons and names like Task Manager:**
+  - Store / MSIX apps (WhatsApp, Microsoft Store, Photos, Settings, Search, ...) show their real name and logo from the Start menu, instead of a generic icon.
+  - Protected processes (Microsoft Defender, Hyper-V and driver services, ...) now get their path, name and icon too, read from Windows without opening the process.
+  - Windows programs without an icon of their own get the Windows icon, and service hosts a gear.
+
 ## 2.2.1 (2026-10-22)
 
 - **One place for the version:** the new `VERSION` file. The program file, About window, tray tip, updater, *Installed apps*, Setup.exe, release notes and the GitHub release all take the version from it.

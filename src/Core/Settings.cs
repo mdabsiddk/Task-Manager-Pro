@@ -220,7 +220,11 @@ namespace TaskManagerPro
         /// started later get the persistent priority limits. On: a small event-driven engine stays in
         /// the tray and applies the exact CPU / memory caps to apps started later too.
         /// </summary>
-        public bool BackgroundEngine { get { return GetBool("BackgroundEngine", false); } set { SetBool("BackgroundEngine", value); } }
+        /// <summary>
+        /// Keep limits on apps opened later and after a restart: while any limit is set, the small
+        /// engine runs (it starts at sign-in and when the window closes). Nothing runs without limits.
+        /// </summary>
+        public bool KeepLimits { get { return GetBool("KeepLimits", true); } set { SetBool("KeepLimits", value); } }
         public bool StartHiddenOnLogon { get { return GetBool("StartHiddenOnLogon", true); } set { SetBool("StartHiddenOnLogon", value); } }
         public bool GroupByType { get { return GetBool("GroupByType", true); } set { SetBool("GroupByType", value); } }
         /// <summary>Weekly check on GitHub for a new version (scheduled task "TaskManagerPro Update").</summary>

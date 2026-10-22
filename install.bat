@@ -129,7 +129,7 @@ echo.
 echo [SUCCESS] %APP_NAME% has been installed.
 echo   - Open it from the Desktop or Start menu: "%APP_NAME%"
 echo   - Set limits in the Max columns, then simply close it: the limits stay active.
-echo   - Optional: Options ^(...^) ^> "Run in background" keeps exact limits for apps you open later.
+echo   - Limits also stay after a restart ^(Options ^(...^) ^> "Keep limits after closing and restart"^).
 echo   - If limits ever make an app unusable: Start menu ^> "%APP_NAME% - Restore all apps".
 echo   - Limits and settings: %DATA_DIR% ^(administrators only^)
 echo.
@@ -142,7 +142,7 @@ exit /b 0
 :update_done
 echo.
 echo [SUCCESS] %APP_NAME% has been updated to version %APP_VERSION%.
-:: Background engine again (only if "Run in background" is on), and the window if it was open.
+:: Background engine again (only if limits are set), and the window if it was open.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%INSTALL_DIR%\%EXE_NAME%' -ArgumentList '--autostart' -WorkingDirectory '%INSTALL_DIR%'"
 if defined REOPEN powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%INSTALL_DIR%\%EXE_NAME%' -WorkingDirectory '%INSTALL_DIR%'"
 ping -n 4 127.0.0.1 >nul

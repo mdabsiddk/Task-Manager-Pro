@@ -23,17 +23,19 @@ One executable, `TaskManagerPro.exe`, plays several roles:
                     │ WinForms UI · ProcessSampler · ETW network · metadata/icons     │
                     │ engine NOT running → enforces limits itself (LimitController)   │
                     │ engine running     → client: saves rules, signals the engine    │
-                    │ on close: Detach() (limits stay) → exit; optionally starts      │
-                    │           the engine if "Run in background" is on               │
+                    │ on close: Detach() (limits stay) → exit; starts the engine if   │
+                    │           limits are set ("Keep limits …", on by default)       │
                     └────────────────────────────────────────────────────────────────┘
                     ┌──────────────── background engine (--engine / --autostart) ─────┐
-                    │ optional · mscorlib + Win32 only · tray icon · message loop     │
+                    │ only while limits exist · mscorlib + Win32 · tray · msg loop    │
                     │ ETW Kernel-Process "ProcessStart" ─► 150 ms debounce ─► Enforce │
                     │ opens the window as a child process (--ui) on tray click        │
                     └────────────────────────────────────────────────────────────────┘
 ```
 
-The engine is started by a Task Scheduler sign-in task with *highest privileges* (no UAC prompt), and only when *Run in background* is on.
+The engine is started by a Task Scheduler sign-in task with *highest privileges* (no UAC prompt). `--autostart` starts it only when `Engine.Needed()`: *Keep limits after closing and restart* is on (the default), limits are not paused, and at least one limit exists (or limits wait for review). With no limits nothing stays running: `--autostart` returns at once, and a running engine exits by itself when the last limit is removed while the window is closed (`StopIfNothingToKeep`).
+
+**Restarts.** Job objects, working-set caps and priorities live on processes, so a restart clears them. *PerfOptions* and QoS policies survive on their own; the exact CPU and memory caps come back because the sign-in task starts the engine, which limits the apps already running and every app started afterwards. Measured with a 20% CPU limit and a simulated restart (sign-in task run with nothing running): the app opened afterwards ran at 22.3% of the PC, and at 96.1% without the engine.
 
 ### Talking between the window and the engine (`Ipc.cs`)
 
@@ -209,10 +211,23 @@ A background timer (1, 2 or 4 s) runs these steps:
 2. `EnumWindows` decides which apps have a real window: visible, unowned, not a tool window, not cloaked, with a title
 3. ETW per-process network bytes are applied
 4. `ProcessTree.Group()` builds the app trees
-5. `ProcessMetadata` resolves the path, description (`FileVersionInfo`) and small icon (`SHGetFileInfo`), cached per PID+start time and per file
+5. `ProcessMetadata` resolves the path, description (`FileVersionInfo`) and small icon, cached per PID+start time and per file (see *App names and icons*)
 6. Limits are enforced, or the engine's status is read
 7. Header totals are computed
 8. The snapshot is passed to the UI thread with `BeginInvoke`
+
+### App names and icons (`ProcessMetadata`, `PackagedApps`)
+
+Like Task Manager, every process gets a name and an icon:
+
+| Step | How |
+|---|---|
+| Path | `QueryFullProcessImageName`. For processes that can't be opened even as administrator (Defender, protected services), `NtQuerySystemInformation(SystemProcessIdInformation)` returns the image path without opening the process; `\Device\HarddiskVolumeN\…` is mapped to a drive letter with `QueryDosDevice`. |
+| Name and icon | `FileVersionInfo.FileDescription` and the file's own icon (`SHGetFileInfo`), when the file has one (`ExtractIconEx(path, -1)`). |
+| Store / MSIX apps | `GetApplicationUserModelId` (or, for a helper process inside the package folder, the package's first app from `GetPackageApplicationIds`) gives the app's ID. Name and logo come from the Start menu's Apps folder: `SHCreateItemFromParsingName("shell:AppsFolder\<AUMID>")` → `IShellItem.GetDisplayName` and `IShellItemImageFactory.GetImage`, keeping the alpha channel. White tile logos (Search, Start, Widgets) are drawn on an accent-coloured tile so they stay visible on a light background. |
+| No icon at all | Windows programs: the Windows icon; `svchost`: a gear; anything else: the generic application icon. |
+
+A system program running with a client's package identity (for example `RuntimeBroker`) keeps its own name and icon, because its file is not inside the package folder.
 
 ### Header totals
 
@@ -258,7 +273,7 @@ Only visible rows are painted. Selection and expansion survive refreshes through
 **Installing.** The package's own `install.bat /update [/reopen]` runs in a separate `cmd` process, and the updating process exits so its exe can be replaced.
 - `/update` skips pauses.
 - `install.bat` closes the running window and engine (`--exit`) and retries the copy for up to ~10 s.
-- Afterwards it runs `--autostart`, which restarts the engine only if *Run in background* is on.
+- Afterwards it runs `--autostart`, which restarts the engine if limits are set.
 - With `/reopen` it reopens the window.
 
 **Weekly check.** The scheduled task *TaskManagerPro Update* has these settings:
