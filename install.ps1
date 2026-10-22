@@ -111,7 +111,11 @@ try {
     Write-Host ''
     Write-Host "[X] $($_.Exception.Message)" -ForegroundColor Red
 } finally {
-    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+    # Antivirus scanners can briefly hold the extracted files: retry the cleanup a few times.
+    for ($try = 0; $try -lt 5 -and (Test-Path -LiteralPath $work); $try++) {
+        Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $work) { Start-Sleep -Milliseconds 500 }
+    }
 }
 
 if ($KeepOpen -or $env:TMPRO_KEEP_OPEN -eq '1') {
