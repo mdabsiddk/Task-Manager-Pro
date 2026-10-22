@@ -1,0 +1,39 @@
+# Publishes a GitHub Release when a version tag is pushed:
+#
+#   git tag v2.0.1
+#   git push origin v2.0.1
+#
+# Assets: TaskManagerPro-Setup.exe, TaskManagerPro.zip, SHA256SUMS.txt.
+# Their names never change, so these links always point to the newest version:
+#   https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest/download/TaskManagerPro-Setup.exe
+#   https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest/download/TaskManagerPro.zip
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release assets
+        shell: pwsh
+        run: ./tools/make-release.ps1 -Version "${{ github.ref_name }}"
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          gh release create $tag `
+            dist/TaskManagerPro-Setup.exe dist/TaskManagerPro.zip dist/SHA256SUMS.txt `
+            --title "Task Manager Pro $tag" `
+            --notes-file dist/RELEASE_NOTES.md `
+            --latest

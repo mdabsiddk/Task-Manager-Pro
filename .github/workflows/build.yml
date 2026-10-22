@@ -1,0 +1,32 @@
+# Builds Task Manager Pro on every push and pull request, so a broken build is noticed at once.
+# The built installer is attached to the run as an artifact (Actions tab -> run -> Artifacts).
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build program, setup and package
+        shell: pwsh
+        run: ./tools/make-release.ps1
+
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: TaskManagerPro-build
+          path: |
+            dist/TaskManagerPro-Setup.exe
+            dist/TaskManagerPro.zip
+            dist/SHA256SUMS.txt
+          retention-days: 14
