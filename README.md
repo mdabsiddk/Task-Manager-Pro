@@ -2,7 +2,7 @@
 
 [![Build](https://github.com/mdabsiddk/Task-Manager-Pro/actions/workflows/build.yml/badge.svg)](https://github.com/mdabsiddk/Task-Manager-Pro/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/mdabsiddk/Task-Manager-Pro?label=release)](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/mdabsiddk/Task-Manager-Pro/total?label=downloads)](https://github.com/mdabsiddk/Task-Manager-Pro/releases)
+[![Downloads](https://img.shields.io/github/downloads/mdabsiddk/Task-Manager-Pro/total?label=downloads&color=blue)](https://github.com/mdabsiddk/Task-Manager-Pro/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4)](#-যা-যা-লাগবে)
 
