@@ -1,8 +1,14 @@
 # Task Manager Pro v2.0
 
 [![Build](https://github.com/mdabsiddk/Task-Manager-Pro/actions/workflows/build.yml/badge.svg)](https://github.com/mdabsiddk/Task-Manager-Pro/actions/workflows/build.yml)
-[![Latest release](https://img.shields.io/github/v/release/mdabsiddk/Task-Manager-Pro?label=download)](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest)
-![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4)
+[![Latest release](https://img.shields.io/github/v/release/mdabsiddk/Task-Manager-Pro?label=release)](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/mdabsiddk/Task-Manager-Pro/total?label=downloads)](https://github.com/mdabsiddk/Task-Manager-Pro/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Windows 10 | 11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4)](#-যা-যা-লাগবে)
+
+[![Download TaskManagerPro-Setup.exe](https://img.shields.io/badge/⬇_Download-TaskManagerPro--Setup.exe-2ea44f?style=for-the-badge)](https://github.com/mdabsiddk/Task-Manager-Pro/releases/latest/download/TaskManagerPro-Setup.exe)
+
+**সম্পূর্ণ ফ্রি ও ওপেন সোর্স।** কোনো সাবস্ক্রিপশন বা ফি নেই, কখনো লাগবে না।
 
 Windows 11 Task Manager-এর মতো দেখতে একটি টাস্ক ম্যানেজার। এতে প্রতিটি অ্যাপের **CPU, মেমোরি, ডিস্ক ও নেটওয়ার্ক ব্যবহারের সর্বোচ্চ লিমিট** বেঁধে দেওয়া যায়।
 লিমিট সেট করে অ্যাপটি বন্ধ করে দিলেও লিমিট চালু থাকে।
@@ -168,7 +174,7 @@ Test-Path "$env:ProgramFiles\TaskManagerPro"
 
 ## 🚀 নতুন ভার্সন প্রকাশ (মেইনটেইনারদের জন্য)
 
-1. `src\AssemblyInfo.cs`-এ ভার্সন বাড়ান।
+1. `src\AssemblyInfo.cs`-এ ভার্সন বাড়ান। ইনস্টলার নিজেই সেখান থেকে ভার্সন পড়ে নেয়।
 2. ট্যাগ পুশ করুন:
    ```powershell
    git tag v2.0.1
@@ -177,3 +183,14 @@ Test-Path "$env:ProgramFiles\TaskManagerPro"
    git push origin v2.0.1
    ```
 3. **GitHub Actions** নিজে থেকেই `TaskManagerPro-Setup.exe`, `TaskManagerPro.zip` ও `SHA256SUMS.txt` বানিয়ে একটি নতুন Release প্রকাশ করবে। উপরের ডাউনলোড লিংক সবসময় সর্বশেষ ভার্সনেই যাবে।
+
+---
+
+## 📄 লাইসেন্স
+
+**[MIT License](LICENSE).** Task Manager Pro সবার জন্য **সম্পূর্ণ ফ্রি**:
+- কোনো সাবস্ক্রিপশন, ফি বা লুকানো খরচ নেই।
+- ব্যক্তিগত ও বাণিজ্যিক যেকোনো কাজে ব্যবহার করা যাবে।
+- সোর্স কোড পরিবর্তন করে নিজের মতো করে নেওয়া এবং অন্যকে দেওয়া যাবে। শুধু লাইসেন্স ও কপিরাইট নোটিশটি রেখে দিতে হবে।
+- সফটওয়্যারটি "যেমন আছে" (as is) দেওয়া হচ্ছে, কোনো ওয়ারেন্টি ছাড়া।
+

@@ -21,7 +21,6 @@ if %errorlevel% neq 0 (
 cd /d "%~dp0"
 
 set "APP_NAME=Task Manager Pro"
-set "APP_VERSION=2.0.0"
 set "EXE_NAME=TaskManagerPro.exe"
 set "INSTALL_DIR=%ProgramFiles%\TaskManagerPro"
 set "DATA_DIR=%ProgramData%\TaskManagerPro"
@@ -33,7 +32,7 @@ set "NGEN=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\ngen.exe"
 if not exist "%NGEN%" set "NGEN=%WINDIR%\Microsoft.NET\Framework\v4.0.30319\ngen.exe"
 
 echo ========================================================
-echo   Installing %APP_NAME% v%APP_VERSION%
+echo   Installing %APP_NAME%
 echo ========================================================
 echo.
 
@@ -43,6 +42,10 @@ if exist "%~dp0%EXE_NAME%" (
     set "SRC_DIR=%~dp0"
     echo [*] Using the included pre-built %EXE_NAME%.
     goto :have_program
+:: Version for "Installed apps", read from the program file itself (no number to update by hand).
+set "APP_VERSION=2.0"
+for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$v = (Get-Item -LiteralPath '%SRC_DIR%%EXE_NAME%').VersionInfo; '{0}.{1}.{2}' -f $v.FileMajorPart, $v.FileMinorPart, $v.FileBuildPart"`) do set "APP_VERSION=%%v"
+echo [*] Version %APP_VERSION%
 )
 call "%~dp0build.bat" /quiet
 if errorlevel 1 goto :fail

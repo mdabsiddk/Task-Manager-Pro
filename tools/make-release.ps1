@@ -37,7 +37,7 @@ $dist = Join-Path $root 'dist'
 if (Test-Path $dist) { Remove-Item $dist -Recurse -Force }
 $pkg = Join-Path $dist 'TaskManagerPro'
 New-Item -ItemType Directory -Path $pkg | Out-Null
-Copy-Item (Join-Path $root 'build\TaskManagerPro.exe'), (Join-Path $root 'build\TaskManagerPro.exe.config') $pkg
+Copy-Item (Join-Path $root 'build\TaskManagerPro.exe'), (Join-Path $root 'build\TaskManagerPro.exe.config'), (Join-Path $root 'LICENSE') $pkg
 foreach ($bat in 'install.bat', 'uninstall.bat') {
     # Batch files need CRLF line endings, whatever git did on checkout.
     $text = [IO.File]::ReadAllText((Join-Path $root $bat)) -replace "`r?`n", "`r`n"
@@ -51,6 +51,7 @@ Install:    double-click install.bat  (answer Yes to the Windows prompt)
 Uninstall:  Settings > Apps > Installed apps > Task Manager Pro > Uninstall
 Emergency:  Start menu > "Task Manager Pro - Restore all apps"
 
+Free and open source - MIT License (see LICENSE).
 https://github.com/mdabsiddk/Task-Manager-Pro
 "@
 [IO.File]::WriteAllText((Join-Path $pkg 'README.txt'), ($readme -replace "`r?`n", "`r`n"))
@@ -93,6 +94,8 @@ $repo = 'mdabsiddk/Task-Manager-Pro'
 ## Task Manager Pro $Version
 
 A Windows 11 style task manager that can limit how much **CPU, memory, disk and network** each app may use. Limits stay active after the app is closed.
+
+**Free and open source** ([MIT License](https://github.com/$repo/blob/main/LICENSE)): no subscription, no fees.
 
 ### Install
 

@@ -1194,7 +1194,8 @@ namespace TaskManagerPro
             Version v = Assembly.GetExecutingAssembly().GetName().Version;
             MessageBox.Show(this,
                 Program.AppName + " v" + v.ToString(2) + "\n\n" +
-                "A lightweight task manager that can limit how much CPU, memory, disk and network each app may use.\n\n" +
+                "A lightweight task manager that can limit how much CPU, memory, disk and network each app may use.\n" +
+                "Free and open source (MIT License): https://github.com/mdabsiddk/Task-Manager-Pro\n\n" +
                 "Limits stay in place after you close this window. " +
                 (settings.BackgroundEngine
                     ? "The background engine also applies the exact limits to apps you open later."

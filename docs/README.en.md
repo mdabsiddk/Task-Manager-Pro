@@ -15,6 +15,7 @@ Set a limit, close the window, and you're done. **Nothing has to keep running in
 | **Version** | 2.0.0 ([changelog](../CHANGELOG.md)) |
 | **Platform** | Windows 10 / 11 (Windows 8/8.1 work too) |
 | **Runtime** | .NET Framework 4.x. It ships with Windows, so there is nothing to install |
+| **License** | [MIT](../LICENSE): free for everyone, forever. No subscription, no fees |
 | **Background cost** | **None** by default. The optional background engine uses 0.2–3.5 MB of RAM and about 0% CPU |
 
 ---
@@ -397,3 +398,13 @@ In `%ProgramData%\TaskManagerPro\error.log`.
 - **CPU hard cap** needs Windows 8 or newer. Elsewhere the fallback is core affinity plus priority, which is approximate.
 - **Limits belong to the app's root program name** (for example `chrome`). Every process in that app's tree is included.
 - **Without the background engine,** apps opened later get priority-based limits, not the exact CPU/memory caps (see the [table above](#how-limits-work)).
+
+---
+
+## License
+
+[MIT License](../LICENSE). Task Manager Pro is **free and open source for everyone**, with no subscription and no fees.
+- You may use it privately or commercially.
+- You may change it and share it, as long as the license and copyright notice are kept.
+- It is provided "as is", without warranty.
+

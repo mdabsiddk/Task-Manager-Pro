@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.1 (2026-10-22)
+
+- **License:** Task Manager Pro is released under the **MIT License**: free and open source for everyone, with no subscription and no fees. `LICENSE` is included in the downloads.
+- **README:** clearer badges.
+  - The release badge now says *release*.
+  - New *downloads* and *license* badges.
+  - The *Windows 10 | 11* badge now opens the requirements section.
+  - A big **Download TaskManagerPro-Setup.exe** button links straight to the installer.
+- **Installer:** reads the version shown in *Installed apps* from the program file itself.
+- **About dialog:** shows the license and the project page.
+
 ## 2.0.0 — Task Manager Pro (2026-10-22)
 
 The project is renamed from *Smart Task Manager* to **Task Manager Pro**. It has been rebuilt to look and work like the Windows 11 Task Manager, and so that **nothing has to keep running in the background**.
