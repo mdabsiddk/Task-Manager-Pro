@@ -63,7 +63,7 @@ Set a limit, close the window, and you're done. **Nothing has to keep running in
 | Column | Meaning | Enforced with |
 |---|---|---|
 | **Max CPU** (%) | Highest share of the whole CPU the app may use | Windows Job Object **CPU hard cap** (exact), plus BelowNormal priority |
-| **Max memory** (MB) | Most RAM the app may keep | Hard working-set maximum: extra pages go to the page file, **the app does not crash** |
+| **Max memory** (MB) | Most RAM the whole app (all its processes together) may keep | No cap below the limit. Above it, hard working-set maximums shared out in proportion to each process's use; extra pages go to the standby list or page file, **the app does not crash** |
 | **Max disk** (MB/s) | Disk read + write | Low I/O priority; Very low (plus Idle priority) while over the limit |
 | **Max network** (Mbps) | Upload speed | Windows Policy-based QoS (`New-NetQosPolicy`) |
 
@@ -277,7 +277,7 @@ We can't know in advance which apps someone uses, so there is **no fixed list of
 - On every start, the registry PerfOptions values and QoS policies are rewritten to match the sealed limits, so a change made there from outside is undone too.
 
 ### 4. Emergency switch
-If limits ever make apps unusable, use **Start menu → "Task Manager Pro – Restore all apps"** (the same as `TaskManagerPro.exe --restore-all`). It does all of this in one step:
+If limits ever make apps unusable, click **Pause limits** in the window. If the window can't be opened, run `TaskManagerPro.exe --restore-all` in PowerShell (`& "$env:ProgramFiles\TaskManagerPro\TaskManagerPro.exe" --restore-all`). It does all of this in one step:
 - closes the window
 - puts **every app back to normal**
 - removes the persistent limits
@@ -415,10 +415,10 @@ Each app has a minimum: half of what it normally uses, learned while it ran with
 Something other than Task Manager Pro changed `limits.cfg`. Its limits are not applied until you click **Review limits** and confirm them.
 
 **Apps became unusable. How do I undo everything quickly?**
-Start menu → **Task Manager Pro – Restore all apps**.
+Click **Pause limits**, or run `& "$env:ProgramFiles\TaskManagerPro\TaskManagerPro.exe" --restore-all`.
 
 **The app got slow after I set a memory limit.**
-That's expected. Memory beyond the limit lives in the page file, which is slower than RAM. Raise the limit a little.
+Only once the app needs more than its limit: the limit is a budget for the whole app, and below it nothing is capped. Above it, the memory beyond the limit is kept aside by Windows (on the standby list or in the page file), which is slower than RAM. If the app is always at its limit, raise the limit a little.
 
 **The network limit doesn't affect downloads.**
 Windows QoS only limits uploads. See [Known limitations](#known-limitations).

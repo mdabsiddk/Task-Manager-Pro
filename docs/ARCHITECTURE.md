@@ -66,7 +66,7 @@ The engine is started by a Task Scheduler sign-in task with *highest privileges*
 
   This is what Task Manager and System Informer use. No process handles are opened. It takes about 3–6 ms for roughly 230 processes.
 - **CPU %** = Δ CPU time ÷ (elapsed time × logical processors), measured with QPC.
-- **Memory** column = private working set, the same number Task Manager shows. The memory **limit** caps the total working set.
+- **Memory** column = private working set, the same number Task Manager shows. The memory **limit** is measured the same way, for the whole app.
 - The buffer is reused between calls and grows only on `STATUS_INFO_LENGTH_MISMATCH`.
 
 ## App grouping (`ProcessTree`)
@@ -85,13 +85,35 @@ The engine is started by a Task Scheduler sign-in task with *highest privileges*
 | CPU | Named Job Object `Local\TaskManagerPro.Job.<app>` with `JOB_OBJECT_CPU_RATE_CONTROL_ENABLE \| HARD_CAP`, `CpuRate = % × 100`. Child processes join automatically. Nested jobs work on Windows 8+. | Cap removed; a job without limits has no effect |
 | CPU (fallback) | Core affinity: `floor(% × cores)` cores, at least one | Original mask |
 | CPU / disk | `BELOW_NORMAL` priority; `IDLE` while over the limit (80% hysteresis, window only) | Original priority class |
-| Memory | `SetProcessWorkingSetSizeEx(..., MAX_ENABLE)` with the limit divided by the process count (at least 16 MB); trimmed every ≥ 15 s while over the limit (window only) | Original min/max and flags |
+| Memory | One budget for the whole app (see *Memory budget* below): no cap below the limit; above it `SetProcessWorkingSetSizeEx(..., MAX_ENABLE)` per process, shared out in proportion to use (at least 32 MB) | Original min/max and flags |
 | Disk | `NtSetInformationProcess(ProcessIoPriority)`: Low (1), Very low (0) while over the limit | Original I/O priority |
 
 Rules:
 - **Never raise.** A priority or I/O priority that is already lower is left alone.
 - **No needless system calls.** The governor computes the wanted state and opens a process only if something differs.
 - **Protected processes stop being retried.** If a process can't be opened, it is marked `NoAccess` and not tried again.
+
+### Memory budget
+
+The memory limit applies to the app's **total** private working set (the Memory column), not to each process.
+
+| App's total | What happens |
+|---|---|
+| below the limit | no cap: the app runs at full speed |
+| above the limit | each process gets a hard working-set maximum of `its working set × limit ÷ app total` (at least 32 MB), so busy processes keep a bigger share and the app as a whole fits the limit. Changes under 1% are skipped. |
+| between 85% and 100% after capping | the caps stay as they are (no flapping) |
+| below 85% | the caps are lifted |
+
+The window re-checks with every refresh, and the engine every 5 seconds while a memory limit exists (one sample, about 5 ms).
+
+Why: earlier versions divided the limit equally by the number of processes. Chrome with 25 processes and a 1000 MB limit got 40 MB per process, so the browser and GPU processes, which need hundreds of MB, were squeezed while the small helpers left their share unused. Chrome stayed at 200–250 MB and was slow. An equal split was also re-trimmed every 15 seconds, judged by the total working set, which counts shared memory once per process.
+
+Measured with a Chrome-like test app (13 processes: 300 + 2 × 200 + 10 × 20 MB = 926 MB):
+
+| Limit | Result |
+|---|---|
+| 600 MB | 926 → 697 → 630 → 603 MB within 3 s, then steady; biggest processes 163, 110, 110 MB (the old method would have capped every process at 46 MB) |
+| 1500 MB | caps lifted at once; back to 905 MB, every process at its full size |
 
 ### Why limits survive closing the app
 
@@ -373,6 +395,6 @@ A smoke test drove the real code against a helper process that burns two CPU cor
 | Floors from app data | learned 1000 MB / 40% / 10 MB/s / 1000 KB/s gives floors of 504 MB / 20% / 5 MB/s / 500 KB/s; with no profile, 600 MB in use gives 304 MB; with no data, 4 processes give 128 MB and ½ core |
 | Profiles | only unlimited apps are learned; they survive a reload; a tampered file is ignored |
 | `--restore-all` | a limited app went back to normal (12.3% CPU, 300 MB, Normal priority); limits paused, PerfOptions removed, rules kept |
-| `install.bat` | end to end: build, stop the running copy, copy, ngen native image, shortcuts (including *Restore all apps*), Installed apps entry, start |
+| `install.bat` | end to end: build, stop the running copy, copy, ngen native image, shortcuts, Installed apps entry, start |
 
 **Not run end to end:** `uninstall.bat` (its `--release-all` step was verified above).

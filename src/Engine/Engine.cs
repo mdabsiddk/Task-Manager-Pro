@@ -9,7 +9,8 @@ namespace TaskManagerPro
     /// <summary>
     /// The background engine. It runs only while limits are set ("Keep limits after closing and
     /// restart", on by default): it starts at sign-in and when the window closes, and keeps the exact
-    /// CPU and memory caps on apps that start later or after a restart. It is event-driven: Windows tells it
+    /// CPU and memory caps on apps that start later or after a restart. It is event-driven (plus a 5-second
+    /// check of the app's total memory, only while a memory limit exists): Windows tells it
     /// (via ETW) when a process starts, it applies the limits in a few milliseconds and goes back to
     /// sleep. No polling, no extra work when no limits are set. It uses only mscorlib + raw Win32
     /// (no WinForms, no System.dll) and opens the window as a separate "--ui" process on demand.
@@ -17,7 +18,8 @@ namespace TaskManagerPro
     internal sealed class Engine
     {
         private const uint WM_APP_TRAY = 0x8001;  // WM_APP + 1
-        private const int TimerApply = 1, TimerTrim = 2;
+        private const int TimerApply = 1, TimerTrim = 2, TimerMemory = 3;
+        private const int MemoryCheckMs = 5000;    // memory budgets: one sample (~5 ms) every 5 s, only while a memory limit exists
         private const int CmdOpen = 1, CmdPause = 2, CmdExit = 3;
         private const int ApplyDelayMs = 150;      // let a burst of process starts settle
         private const int FallbackPollMs = 3000;   // only if ETW is unavailable
@@ -187,6 +189,7 @@ namespace TaskManagerPro
             {
                 Native.KillTimer(hwnd, (IntPtr)TimerApply);
                 Native.KillTimer(hwnd, (IntPtr)TimerTrim);
+                Native.KillTimer(hwnd, (IntPtr)TimerMemory);
             }
             if (processWatcher != null) processWatcher.Dispose();
             // Limits stay on the running apps: only Pause / removing a limit / uninstall undo them.
@@ -221,6 +224,16 @@ namespace TaskManagerPro
         private void UpdateWatcher()
         {
             bool needed = !limits.Paused && limits.Rules.Count > 0;
+
+            // A memory limit is a budget for the app's total, which changes as the app works, so it is
+            // checked every few seconds. CPU, disk and network limits need no checks.
+            bool memoryLimits = false;
+            if (needed)
+            {
+                foreach (ProcessRule rule in limits.Rules.Snapshot().Values) memoryLimits |= rule.MaxRamMB > 0;
+            }
+            if (memoryLimits) Native.SetTimer(hwnd, (IntPtr)TimerMemory, MemoryCheckMs, IntPtr.Zero);
+            else Native.KillTimer(hwnd, (IntPtr)TimerMemory);
             if (needed && processWatcher == null && !polling)
             {
                 processWatcher = EtwSession.Start("TaskManagerPro-ProcessStart", EtwSession.KernelProcessProvider,
@@ -423,7 +436,7 @@ namespace TaskManagerPro
                         return IntPtr.Zero;
 
                     case 0x0113: // WM_TIMER
-                        if (wParam.ToInt32() == TimerApply)
+                        if (wParam.ToInt32() == TimerApply || wParam.ToInt32() == TimerMemory)
                         {
                             Apply();
                         }

@@ -11,7 +11,9 @@ namespace TaskManagerPro
     ///  - CPU : a named Job Object per app with a CPU-rate hard cap (Windows 8+). Child processes the app
     ///          starts later join the job automatically. Falls back to core affinity where a job can't be used.
     ///          Plus BelowNormal priority (Idle while over the limit, when usage is being watched).
-    ///  - RAM : hard working-set maximum (excess pages go to the page file; nothing crashes)
+    ///  - RAM : one memory budget for the whole app (see <see cref="MemoryCap"/>): no cap while the app
+    ///          is below its limit; above it, hard working-set maximums shared out in proportion to what
+    ///          each process uses (excess pages go to the standby list / page file; nothing crashes)
     ///  - Disk: I/O priority Low (Very low while over the limit)
     /// Original values are restored when a limit is removed or paused (<see cref="ReleaseGroup"/>,
     /// <see cref="ReleaseAll"/>). Processes limited during an earlier session are recognised through
@@ -25,8 +27,9 @@ namespace TaskManagerPro
                                         | NativeMethods.PROCESS_DUP_HANDLE;
         private const long MinWorkingSetBytes = LimitPolicy.MinMemoryPerProcessMB * 1024L * 1024L; // never squeeze a process below this
         private const double Hysteresis = 0.8;                    // stop throttling below 80% of the limit
+        private const double MemoryRelease = 0.85;                // lift the memory caps below 85% of the limit
+        private const double MemoryTolerance = 0.01;              // ignore cap changes smaller than 1%
         private const int IoVeryLow = 0, IoLow = 1, IoNormal = 2;
-        private static readonly TimeSpan TrimInterval = TimeSpan.FromSeconds(15);
 
         private sealed class ProcState
         {
@@ -54,7 +57,6 @@ namespace TaskManagerPro
             public UIntPtr OriginalMinWs, OriginalMaxWs;
             public uint OriginalWsFlags;
             public long AppliedWsMax;
-            public DateTime LastTrimUtc;
 
             public bool HasChanges
             {
@@ -66,6 +68,7 @@ namespace TaskManagerPro
         {
             public bool CpuHot;
             public bool DiskHot;
+            public bool MemoryCapped; // the app went over its memory limit and is held to it
             public IntPtr Job;      // named job object "TaskManagerPro.Job.<app>"
             public int JobPercent;  // cap currently set on the job, 0 = none
             public bool JobUsable = true;
@@ -212,11 +215,13 @@ namespace TaskManagerPro
                 : 0;
             int wantIo = rule.MaxDiskMBps > 0 ? (gs.DiskHot ? IoVeryLow : IoLow) : -1;
 
+            // Memory: measured like the Memory column (private working set of all the app's processes).
             long ramLimit = (long)rule.MaxRamMB * 1024L * 1024L;
-            long wsMax = rule.MaxRamMB > 0 ? Math.Max(MinWorkingSetBytes, ramLimit / Math.Max(1, g.Processes.Count)) : 0;
-            bool overRam = rule.MaxRamMB > 0 && g.WorkingSet > ramLimit;
+            bool overRam = rule.MaxRamMB > 0 && g.PrivateBytes > ramLimit;
+            if (rule.MaxRamMB <= 0 || g.PrivateBytes < ramLimit * MemoryRelease) gs.MemoryCapped = false;
+            else if (overRam) gs.MemoryCapped = true;
+            double shrink = overRam ? (double)ramLimit / g.PrivateBytes : 0;
 
-            DateTime now = DateTime.UtcNow;
             int considered = 0, denied = 0;
             foreach (ProcInfo p in g.Processes)
             {
@@ -232,10 +237,10 @@ namespace TaskManagerPro
                     continue;
                 }
 
-                bool trimDue = watchUsage && overRam && now - st.LastTrimUtc > TrimInterval;
+                long wsMax = MemoryCap(gs, st, p, shrink);
                 bool joinJob = haveJob && !st.InJob && !st.JobFailed;
                 int wantCores = capOn && !st.JobFailed ? 0 : fallbackCores;
-                if (!joinJob && !NeedsWork(st, wantPriority, wantCores, wantIo, wsMax, trimDue)) continue;
+                if (!joinJob && !NeedsWork(st, wantPriority, wantCores, wantIo, wsMax)) continue;
 
                 IntPtr h = NativeMethods.OpenProcess(AccessRights, false, p.Pid);
                 if (h == IntPtr.Zero)
@@ -257,11 +262,6 @@ namespace TaskManagerPro
                     ApplyAffinity(h, st, wantCores);
                     ApplyIoPriority(h, st, wantIo);
                     ApplyWorkingSet(h, st, wsMax);
-                    if (trimDue)
-                    {
-                        NativeMethods.EmptyWorkingSet(h);
-                        st.LastTrimUtc = now;
-                    }
                 }
                 finally
                 {
@@ -270,7 +270,7 @@ namespace TaskManagerPro
             }
 
             if (considered > 0 && denied == considered) return GovernorState.NoAccess;
-            if (gs.CpuHot || gs.DiskHot || (watchUsage && overRam)) return GovernorState.Throttling;
+            if (gs.CpuHot || gs.DiskHot || (watchUsage && gs.MemoryCapped)) return GovernorState.Throttling;
             return GovernorState.Active;
         }
 
@@ -345,10 +345,30 @@ namespace TaskManagerPro
             return hot;
         }
 
-        private static bool NeedsWork(ProcState st, uint wantPriority, int wantCores, int wantIo, long wsMax, bool trimDue)
+        /// <summary>
+        /// The memory limit is one budget for the whole app, not a split per process. Splitting it
+        /// equally starved the big processes (with 25 Chrome processes, 1000 MB meant 40 MB each for
+        /// the browser and GPU processes, which need hundreds) while the small ones left their share
+        /// unused, so the app stayed far below its limit and became slow.
+        ///  - Below the limit: no cap at all, the app runs at full speed.
+        ///  - Above the limit: every process gets a hard working-set maximum in proportion to what it
+        ///    uses now (busy processes keep a bigger share), scaled so the app as a whole fits the limit.
+        ///    New processes start free and are included at the next check.
+        ///  - Between 85% and 100%: the caps are kept (no flapping); below 85% they are lifted.
+        /// Returns the wanted maximum in bytes, 0 = no cap.
+        /// </summary>
+        private static long MemoryCap(GroupState gs, ProcState st, ProcInfo p, double shrink)
         {
-            return trimDue
-                || (wantPriority == 0 ? st.PriorityChanged : st.AppliedPriority != wantPriority)
+            if (!gs.MemoryCapped) return 0;
+            if (shrink <= 0) return st.AppliedWsMax; // within the limit: keep what is set
+            long cap = Math.Max(MinWorkingSetBytes, (long)(p.WorkingSet * shrink));
+            if (st.AppliedWsMax > 0 && Math.Abs(cap - st.AppliedWsMax) < st.AppliedWsMax * MemoryTolerance) return st.AppliedWsMax;
+            return cap;
+        }
+
+        private static bool NeedsWork(ProcState st, uint wantPriority, int wantCores, int wantIo, long wsMax)
+        {
+            return (wantPriority == 0 ? st.PriorityChanged : st.AppliedPriority != wantPriority)
                 || (wantCores == 0 ? st.AffinityChanged : st.AppliedCores != wantCores)
                 || (wantIo < 0 ? st.IoChanged : st.AppliedIo != wantIo)
                 || (wsMax <= 0 ? st.WorkingSetChanged : st.AppliedWsMax != wsMax);

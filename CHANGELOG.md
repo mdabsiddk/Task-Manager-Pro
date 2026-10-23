@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.4.0 (2026-10-23)
+
+- **Memory limits use the whole limit.** The limit is now one budget for the whole app (all its processes), measured like the Memory column:
+  - below the limit nothing is capped, so the app runs at full speed
+  - above it, each process gets a share in proportion to what it uses, so the app as a whole stays at the limit
+  - the caps are lifted again below 85% of the limit
+  - Earlier versions split the limit equally between processes: with 25 Chrome processes, 1000 MB meant 40 MB each, so Chrome stayed at 200–250 MB and was slow. Caps left by earlier versions are removed automatically.
+  - Measured with a Chrome-like test app (926 MB): a 600 MB limit settles at 603 MB within 3 seconds with the biggest process keeping 163 MB (the old method: 46 MB each); a 1500 MB limit leaves it at its full 905 MB.
+  - With the window closed, the engine checks the app's total every 5 seconds, only while a memory limit exists.
+- **New app icon:** a green tile with a gauge whose needle stays below the amber limit zone.
+- The **Restore all apps** Start menu shortcut is no longer created (and is removed on update). Use **Pause limits** in the window, or `TaskManagerPro.exe --restore-all`.
+
 ## 2.3.0 (2026-10-23)
 
 - **Limits survive a restart.** While limits are set, the small engine (0.2–3.5 MB, no CPU while idle) starts at sign-in and when the window closes, so the exact CPU and memory caps also apply after a restart and to apps opened later. With no limits set nothing runs, and the engine exits by itself when the last limit is removed.

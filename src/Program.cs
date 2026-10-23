@@ -19,7 +19,6 @@ namespace TaskManagerPro
     ///   --update-check   weekly scheduled task: installs a newer GitHub release if there is one
     ///   --register-updates  (installer) creates or removes the sign-in and weekly update tasks per the settings
     ///   --restore-all    emergency: closes the window, restores every app and pauses all limits
-    ///                    (Start menu: "Task Manager Pro - Restore all apps")
     /// This class must not touch WinForms types, so the engine never loads WinForms.
     /// </summary>
     internal static class Program

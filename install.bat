@@ -35,7 +35,6 @@ set "DATA_DIR=%ProgramData%\TaskManagerPro"
 set "UNINSTALL_KEY=HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\TaskManagerPro"
 set "DESKTOP_LNK=%PUBLIC%\Desktop\%APP_NAME%.lnk"
 set "STARTMENU_LNK=%ProgramData%\Microsoft\Windows\Start Menu\Programs\%APP_NAME%.lnk"
-set "RESTORE_LNK=%ProgramData%\Microsoft\Windows\Start Menu\Programs\%APP_NAME% - Restore all apps.lnk"
 set "NGEN=%WINDIR%\Microsoft.NET\Framework64\v4.0.30319\ngen.exe"
 if not exist "%NGEN%" set "NGEN=%WINDIR%\Microsoft.NET\Framework\v4.0.30319\ngen.exe"
 
@@ -100,10 +99,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "foreach ($p in @('%DESKTOP_LNK%', '%STARTMENU_LNK%')) {" ^
   "  $s = $w.CreateShortcut($p); $s.TargetPath = '%INSTALL_DIR%\%EXE_NAME%';" ^
   "  $s.WorkingDirectory = '%INSTALL_DIR%'; $s.IconLocation = '%INSTALL_DIR%\%EXE_NAME%,0';" ^
-  "  $s.Description = 'Task manager with per-app CPU, memory, disk and network limits'; $s.Save() }" ^
-  "$r = $w.CreateShortcut('%RESTORE_LNK%'); $r.TargetPath = '%INSTALL_DIR%\%EXE_NAME%'; $r.Arguments = '--restore-all';" ^
-  "$r.WorkingDirectory = '%INSTALL_DIR%'; $r.IconLocation = '%INSTALL_DIR%\%EXE_NAME%,0';" ^
-  "$r.Description = 'Emergency: put every app back to normal and pause all limits'; $r.Save()"
+  "  $s.Description = 'Task manager with per-app CPU, memory, disk and network limits'; $s.Save() }"
+:: Older versions also added a "Restore all apps" Start menu shortcut; it is no longer created.
+del /q "%ProgramData%\Microsoft\Windows\Start Menu\Programs\%APP_NAME% - Restore all apps.lnk" >nul 2>&1
 
 :: ---- 7. Weekly update check (scheduled task; follows the user's setting) ----
 echo [*] Setting up the weekly update check...
@@ -130,7 +128,7 @@ echo [SUCCESS] %APP_NAME% has been installed.
 echo   - Open it from the Desktop or Start menu: "%APP_NAME%"
 echo   - Set limits in the Max columns, then simply close it: the limits stay active.
 echo   - Limits also stay after a restart ^(Options ^(...^) ^> "Keep limits after closing and restart"^).
-echo   - If limits ever make an app unusable: Start menu ^> "%APP_NAME% - Restore all apps".
+echo   - If limits ever make an app unusable: "Pause limits" in the window puts every app back to normal.
 echo   - Limits and settings: %DATA_DIR% ^(administrators only^)
 echo.
 echo Starting %APP_NAME%...
