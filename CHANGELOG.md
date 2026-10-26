@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.1 (2026-10-27)
+
+- Memory caps are now lifted completely only when the app drops below **20%** of its limit (was 70%). Until then the caps always add up to the whole limit, so they only matter when the app tries to go over it. Measured: with a 1500 MB limit the test app got all it wanted (919 MB) while the caps stayed in place.
+
 ## 2.5.0 (2026-10-27)
 
 - **Memory caps only bite when the app tries to go over its limit.** Once an app has gone over, its caps are recomputed at every check so they always add up to the whole limit: the app is pulled back to the limit, but never held below it. Below 70% of the limit the caps are lifted completely (was 85%).
