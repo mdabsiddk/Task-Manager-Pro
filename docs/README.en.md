@@ -63,11 +63,11 @@ Set a limit, close the window, and you're done. **Nothing has to keep running in
 | Column | Meaning | Enforced with |
 |---|---|---|
 | **Max CPU** (%) | Highest share of the whole CPU the app may use | Windows Job Object **CPU hard cap** (exact), plus BelowNormal priority |
-| **Max memory** (MB) | Most RAM the whole app (all its processes together) may keep | No cap below the limit. Above it, hard working-set maximums shared out in proportion to each process's use; extra pages go to the standby list or page file, **the app does not crash** |
+| **Max memory** (MB) | Most RAM the whole app (all its processes together) may keep | Applies to the app's **total**. No process gets a cap of its own: Windows manages them as usual and one process may use the whole limit. Over the limit, every process is trimmed by the same share (extra pages go to the standby list or page file), **the app does not crash** |
 | **Max disk** (MB/s) | Disk read + write | Low I/O priority; Very low (plus Idle priority) while over the limit |
 | **Max network** (Mbps) | Upload speed | Windows Policy-based QoS (`New-NetQosPolicy`) |
 
-- **Each app has its own lowest allowed limit,** worked out from the app's own usage (see [Protection against misuse](#protection-against-misuse)). Opening a Max box shows that minimum.
+- **One check when you press Enter:** a limit under 20% of what the app uses in total is not saved, and a notice names the lowest allowed value (see [Protection against misuse](#protection-against-misuse)).
 - **One click to type.** Click a Max cell, type a number and press `Enter`.
   - `Tab` moves to the next Max cell.
   - `Esc` cancels.
@@ -180,7 +180,7 @@ The output goes to `build\TaskManagerPro.exe` (plus `TaskManagerPro.exe.config`)
 
 Invalid input is rejected with a message, and nothing is saved:
 - letters, negative numbers, or CPU over 100%
-- **a value below the app's own minimum.** The notice names the exact minimum, for example: *"The lowest memory limit is 20 MB."* or *"The lowest CPU limit for Game is 20% (a quarter of what it uses now)."*
+- **a value below 20% of what the app uses in total** (all its processes together, at the moment you press Enter). The notice names the exact minimum, for example: *"The lowest memory limit for Electron is 26 MB (20% of what it uses now)."*
 
 Messages appear as a notice card in the bottom-right corner. A ring around its icon shows how long it stays (3 seconds; it waits while the mouse is over the card); ✕ closes it.
 
@@ -205,7 +205,7 @@ Every limit uses a documented Windows mechanism. There are no drivers, no suspen
 | | Running apps | Apps started later, with nothing of ours running | Apps started later, with the background engine |
 |---|---|---|---|
 | **CPU** | Exact hard cap (Job Object) | Lower CPU priority (Windows *PerfOptions*) | Exact hard cap |
-| **Memory** | Hard working-set limit | Lower memory priority (trimmed first under pressure) | Hard working-set limit |
+| **Memory** | Checked on the app's total; trimmed back once when over | Lower memory priority (trimmed first under pressure) | Checked on the app's total every 5 s |
 | **Disk** | Low I/O priority | Low I/O priority | Low I/O priority |
 | **Network** | Windows QoS policy | Windows QoS policy | Windows QoS policy |
 
@@ -254,17 +254,11 @@ We can't know in advance which apps someone uses, so there is **no fixed list of
 - **Learning:** while an app runs **without a limit**, Task Manager Pro records what it normally uses: memory, CPU, disk and network.
   - It takes at most one sample every 15 seconds, as a moving average.
   - Apps that have a limit are never sampled, so a limit can't drag its own minimum down.
-- **Memory:** one minimum for every app, **20 MB**. Nothing else limits a memory limit.
-- **CPU, disk and network can't go below a quarter of what the app uses.** While it runs without a limit, its use right now counts; otherwise its learned normal use.
-- With no data at all, only the Windows-level floors apply:
-  - CPU: half of one logical processor
-  - memory: 20 MB for every app
-  - disk: 1 MB/s
-  - network: about 0.25 Mbps
-- **These minimums are enforced everywhere:**
-  - when you type a limit
-  - every time `limits.cfg` is loaded, so a too-small number in the file is raised
-  - inside the limit engine itself
+- **One rule, one check:** a limit under **20% of what the app uses as a whole** is not saved. It is the same for CPU, memory, disk and network. While the app runs without a limit, its total use right now counts; otherwise its learned normal use. There are no other minimums: nothing fixed, nothing per process.
+- With no data at all there is no minimum.
+- **Where it is checked:**
+  - when you type a limit (against the app's total use at that moment)
+  - when `limits.cfg` is loaded after it was changed from outside (against the app's learned use)
 - Windows components (Explorer, the desktop window manager, antivirus, …) can never be limited, even through the file.
 
 ### 2. The settings folder is locked
@@ -415,7 +409,7 @@ Yes. At sign-in Windows starts the small engine (only when limits are set), whic
 Some processes (for example anti-virus) are protected by Windows itself. No task manager can change them.
 
 **Why can't I set a lower limit?**
-For CPU, disk and network each app has a minimum: a quarter of what it uses now (or normally, if it isn't running). Less could stop it from starting or keep it from working. The memory limit is the exception: its minimum is 20 MB for every app. If you try to save less, a notice tells you the exact minimum.
+Each app has a minimum: 20% of what it uses in total now (or normally, if it isn't running). Less could stop it from starting or keep it from working. If you try to save less, a notice tells you the exact minimum.
 
 **A yellow bar says the limits file was changed.**
 Something other than Task Manager Pro changed `limits.cfg`. Its limits are not applied until you click **Review limits** and confirm them.
@@ -424,7 +418,7 @@ Something other than Task Manager Pro changed `limits.cfg`. Its limits are not a
 Click **Pause limits**, or run `& "$env:ProgramFiles\TaskManagerPro\TaskManagerPro.exe" --restore-all`.
 
 **The app got slow after I set a memory limit.**
-Only once the app needs more than its limit: the limit is a budget for the whole app, and below it nothing is capped. Above it, the memory beyond the limit is kept aside by Windows (on the standby list or in the page file), which is slower than RAM. If the app is always at its limit, raise the limit a little.
+Only once the app needs more than its limit. Below it nothing is touched. Above it, memory the app isn't using is taken away (it goes to the standby list or the page file); pages it needs come back by themselves, which is slower than RAM. If the app is always at its limit, raise the limit a little.
 
 **The network limit doesn't affect downloads.**
 Windows QoS only limits uploads. See [Known limitations](#known-limitations).

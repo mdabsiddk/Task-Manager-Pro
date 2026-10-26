@@ -85,7 +85,7 @@ The engine is started by a Task Scheduler sign-in task with *highest privileges*
 | CPU | Named Job Object `Local\TaskManagerPro.Job.<app>` with `JOB_OBJECT_CPU_RATE_CONTROL_ENABLE \| HARD_CAP`, `CpuRate = % × 100`. Child processes join automatically. Nested jobs work on Windows 8+. | Cap removed; a job without limits has no effect |
 | CPU (fallback) | Core affinity: `floor(% × cores)` cores, at least one | Original mask |
 | CPU / disk | `BELOW_NORMAL` priority; `IDLE` while over the limit (80% hysteresis, window only) | Original priority class |
-| Memory | One budget for the whole app (see *Memory budget* below): no cap below the limit; above it `SetProcessWorkingSetSizeEx(..., MAX_ENABLE)` per process, shared out in proportion to use (at least 2 MB per process) | Original min/max and flags |
+| Memory | One limit for the whole app's total (see *Memory limit* below). No process gets a cap; when the total is over, each working set is trimmed once | Nothing to restore (caps set by versions before 2.6.0 are lifted) |
 | Disk | `NtSetInformationProcess(ProcessIoPriority)`: Low (1), Very low (0) while over the limit | Original I/O priority |
 
 Rules:
@@ -93,27 +93,26 @@ Rules:
 - **No needless system calls.** The governor computes the wanted state and opens a process only if something differs.
 - **Protected processes stop being retried.** If a process can't be opened, it is marked `NoAccess` and not tried again.
 
-### Memory budget
+### Memory limit
 
-The memory limit applies to the app's **total** private working set (the Memory column), not to each process.
+The memory limit applies to the app's **total** private working set (the Memory column). Nothing is capped per process.
 
-| App's total | What happens |
-|---|---|
-| never above the limit yet | no cap: the app runs at full speed |
-| once above the limit | each process gets a hard working-set maximum of `its working set × limit ÷ app total` (at least 2 MB), recomputed at every check. The caps always add up to the whole limit: above it they shrink the app back, below it they grow and leave room. So they only bite when the app tries to go over its limit, and the app is never held below it. Changes under 1% are skipped. |
-| any total, while the limit exists | the caps stay (they are not lifted, so the app can't jump over the limit and be pulled back); removing the limit or pausing lifts them |
+- **Below the limit:** nothing is done. Windows manages every process as usual, so one process may use the whole limit.
+- **Over the limit:** `TrimToLimit` (at most once every 4 s per app) takes each process of the app whose working set is at least 16 MB and trims it by the same share, `limit × 95% ÷ app total`. It does this with a one-time `SetProcessWorkingSetSizeEx(min = 200 KB, max = target, MIN_DISABLE | MAX_ENABLE)`, and then immediately sets the maximum to a huge soft value (`1 << 36`, `MAX_DISABLE`), so no cap stays on the process. Pages the process still needs fault back in by themselves.
+- **Checks:** the window with every refresh, the engine every 5 seconds while a memory limit exists (one sample, about 5 ms).
 
-The window re-checks with every refresh, and the engine every 5 seconds while a memory limit exists (one sample, about 5 ms).
+Two findings behind this (measured on Windows 11):
+- Setting the process's *original* default maximum back (about 1.3 MB, soft) trims the process far below the target in a second, so it can't be used to undo the trim; a huge soft maximum trims nothing.
+- Windows has no memory floor of its own: hard caps down to 1 MB were accepted.
 
-Why: earlier versions divided the limit equally by the number of processes. Chrome with 25 processes and a 1000 MB limit got 40 MB per process, so the browser and GPU processes, which need hundreds of MB, were squeezed while the small helpers left their share unused. Chrome stayed at 200–250 MB and was slow. An equal split was also re-trimmed every 15 seconds, judged by the total working set, which counts shared memory once per process.
+History: versions up to 2.5 gave every process a hard working-set cap (first the limit divided equally by the process count, later in proportion to use). That squeezed the big processes of apps such as Chrome and kept them far below the limit.
 
-Measured with a Chrome-like test app (13 processes: 300 + 2 × 200 + 10 × 20 MB = 926 MB):
+Measured with a Chrome-like test app (13 processes, 926 MB; 10% of the memory is used often, the rest rarely):
 
 | Limit | Result |
 |---|---|
-| 600 MB | 926 → 697 → 630 → 603 MB within 3 s, then steady; biggest processes 163, 110, 110 MB (the old method would have capped every process at 46 MB) |
-| then 800 MB | the caps grow with the limit: 603 → 728 → 778 → 793 MB, never above 800 (biggest 244, 165, 165 MB) |
-| then 1500 MB | the caps grow again: the app reaches all it wants, 919 MB, every process at its full size, without ever going over 1500 |
+| 600 MB | 925 → 549 MB at the first check (target 570); no process has a cap; it stays there |
+| then 800 MB and 1500 MB | nothing is done (below the limit), still 552 MB |
 
 ### Why limits survive closing the app
 
@@ -148,31 +147,22 @@ The kernel applies these values at process creation. They are synced on every ru
 - It takes an exponential moving average (α = 0.1, at most one sample per app every 15 s) of private memory, CPU %, disk and network.
 - It samples **only apps without an active limit**, so a limit can't lower its own minimum.
 
-`LimitPolicy.FloorsFor` picks the first of these that applies:
+There is one rule for how low a limit may be: **20% of what the app uses as a whole.** `LimitPolicy.FloorsFor` computes it:
 
-| Situation | Floor |
+| Situation | Minimum (CPU, memory, disk and network alike) |
 |---|---|
-| App running without a limit (CPU, disk, network) | ¼ × current use |
-| Not running, or already limited (its use is held down): learned profile (at least 3 samples) (CPU, disk, network) | ¼ × typical use |
-| No data at all | Windows-level floor only |
+| App running without a limit | 20% × its total use right now (all processes, at the moment Enter is pressed) |
+| Not running, or already limited (its use is held down): learned profile (at least 3 samples) | 20% × its typical use |
+| No data at all | none |
 
-`RuleStore.Load` applies only the Windows-level floor to a sealed `limits.cfg` (its values were checked in the window when they were set, so a limit set while the app used little is not raised later), and the app's learned floor to an unsealed one.
+The window checks a typed value against it and shows *Limit not saved* with the exact minimum. There are no other minimums: nothing fixed, nothing per process.
 
-In every case the floor is at least the Windows-level floor:
-
-| Resource | Windows-level floor |
-|---|---|
-| CPU | ½ logical processor |
-| Memory | 20 MB for every app (no other memory floor: not per process, not from use) |
-| Disk | 1 MB/s |
-| Network | 30 KB/s (about 0.25 Mbps) |
-
-`LimitPolicy.Sanitize` raises any non-zero limit to the floor and drops rules for Windows components or invalid names. It runs:
+`RuleStore.Load` applies the minimum from the learned profile only to an unsealed `limits.cfg` (changed from outside); a sealed file's values were checked in the window when they were set and are not raised later. `LimitPolicy.Sanitize` also drops rules for Windows components or invalid names, and clamps to sanity ceilings. It runs:
 - on every `RuleStore.Set`
 - on every load
 - in `LimitController.SetRule`
 
-The governor also never sets a job cap below ½ core or a working-set cap below 2 MB per process. (Windows itself has no memory floor: it accepted hard caps down to 1 MB in a test.)
+The governor still never sets a CPU job cap below ½ core.
 
 **Locked data folder.** `AppPaths.EnsureDataDir` runs at window and engine start:
 - It sets a protected DACL on `%ProgramData%\TaskManagerPro`: SYSTEM and Administrators get full control, with no inheritance from ProgramData. (ProgramData normally lets *Users* create files in sub-folders.)
@@ -368,6 +358,8 @@ The version number exists in one place: the `VERSION` file (`X.Y.Z`).
 
 ## Verification (v2.0)
 
+(The memory rows below describe v2.0, which capped every process hard. Since 2.6.0 the memory limit works as described under *Memory limit*.)
+
 A smoke test drove the real code against a helper process that burns two CPU cores and holds 300 MB:
 
 | Check | Result |
@@ -401,9 +393,9 @@ A smoke test drove the real code against a helper process that burns two CPU cor
 | Check | Result |
 |---|---|
 | Data folder ACL | protected; only Administrators and SYSTEM. After install, a non-admin shell can neither list nor write the folder |
-| Unsealed `limits.cfg` (`1% / 1 MB / 1 KB/s`, plus a rule for `explorer`) | not applied (needs review); the explorer rule was dropped; values raised to 4% / 20 MB / 30 KB/s (16-core PC) |
+| Unsealed `limits.cfg` (`1% / 1 MB / 1 KB/s`, plus a rule for `explorer`) | not applied (needs review); the explorer rule was dropped; values raised to the app's learned 20% minimum (if any) |
 | Accept, then edit the sealed file from outside | accept re-seals; an outside edit is detected and nothing applied; saving over it is refused; reject leaves no limits and keeps a copy |
-| Floors from app data | learned 1000 MB / 40% / 10 MB/s / 1000 KB/s gives floors of 504 MB / 20% / 5 MB/s / 500 KB/s; with no profile, 600 MB in use gives 304 MB; with no data, 4 processes give 128 MB and ½ core |
+| Minimums from app data | 20% of the app's total use: 902 MB in use gives 181 MB; a learned 2000 MB gives 400 MB; with no data there is no minimum |
 | Profiles | only unlimited apps are learned; they survive a reload; a tampered file is ignored |
 | `--restore-all` | a limited app went back to normal (12.3% CPU, 300 MB, Normal priority); limits paused, PerfOptions removed, rules kept |
 | `install.bat` | end to end: build, stop the running copy, copy, ngen native image, shortcuts, Installed apps entry, start |

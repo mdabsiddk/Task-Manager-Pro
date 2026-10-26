@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.6.0 (2026-10-27)
+
+- **One rule for the lowest limit:** a limit under **20% of what the app uses in total** (all its processes, at the moment you press Enter) is not saved. It is one check, the same for CPU, memory, disk and network. The 20 MB, per-process, 64 MB and other fixed minimums are gone. The notice names the exact lowest value, e.g. "The lowest memory limit for Electron is 26 MB (20% of what it uses now)."
+- **The memory limit puts no cap on any process.** Windows manages the processes as usual and a single process may use the whole limit. Task Manager Pro only checks the app's total; when it is over the limit, each process's memory is trimmed once by the same share, back to 95% of the limit, and nothing stays capped. Caps left by earlier versions are lifted.
+  - Measured (Chrome-like test app, 926 MB): 600 MB limit -> 549 MB at the first check, with no process capped; it stays there.
+  - Windows has no memory floor of its own: caps down to 1 MB were accepted in a test.
+
 ## 2.5.6 (2026-10-27)
 
 - **One minimum for memory limits: 20 MB, the same for every app.** The 20 MB-per-process rule, the 64 MB per-app rule and the quarter-of-use rule no longer apply to memory (they still apply to CPU, disk and network). The notice just says *The lowest memory limit is 20 MB.* A hard cap on one process is never set below 2 MB.
