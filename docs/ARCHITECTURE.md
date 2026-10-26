@@ -101,7 +101,7 @@ The memory limit applies to the app's **total** private working set (the Memory 
 |---|---|
 | never above the limit yet | no cap: the app runs at full speed |
 | once above the limit | each process gets a hard working-set maximum of `its working set × limit ÷ app total` (at least 32 MB), recomputed at every check. The caps always add up to the whole limit: above it they shrink the app back, below it they grow and leave room. So they only bite when the app tries to go over its limit, and the app is never held below it. Changes under 1% are skipped. |
-| below 80% of the limit | the caps are lifted completely |
+| any total, while the limit exists | the caps stay (they are not lifted, so the app can't jump over the limit and be pulled back); removing the limit or pausing lifts them |
 
 The window re-checks with every refresh, and the engine every 5 seconds while a memory limit exists (one sample, about 5 ms).
 
@@ -112,8 +112,8 @@ Measured with a Chrome-like test app (13 processes: 300 + 2 × 200 + 10 × 20 MB
 | Limit | Result |
 |---|---|
 | 600 MB | 926 → 697 → 630 → 603 MB within 3 s, then steady; biggest processes 163, 110, 110 MB (the old method would have capped every process at 46 MB) |
-| then 800 MB | the app (603 MB) is below 80% of 800 MB (640 MB), so the caps are lifted and it briefly grows to 905 MB; the next check pulls it back to the limit: 805 MB (biggest 257, 171, 170 MB) |
-| then 1500 MB | the app (799 MB) is below 80% of 1500 MB (1200 MB): caps lifted completely, the app grows to all it wants, 919 MB, every process at its full size |
+| then 800 MB | the caps grow with the limit: 603 → 728 → 778 → 793 MB, never above 800 (biggest 244, 165, 165 MB) |
+| then 1500 MB | the caps grow again: the app reaches all it wants, 919 MB, every process at its full size, without ever going over 1500 |
 
 ### Why limits survive closing the app
 

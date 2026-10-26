@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.4 (2026-10-27)
+
+- **Memory limit is a pure ceiling.** The caps are no longer lifted below some share of the limit (that let the app jump above the limit and be pulled back). Once an app has gone over its limit, the caps stay and are recomputed at every check so they add up to exactly the limit: the app can grow up to the limit when it needs to, is never pushed below it, and is brought back whenever it goes over. Removing the limit or pausing lifts them. Measured: 800 MB limit, 603 → 793 MB with no overshoot; 1500 MB limit, 919 MB.
+
 ## 2.5.3 (2026-10-27)
 
 - Memory caps are lifted completely when the app drops below **80%** of its limit (was 20%; 70% in 2.5.0).

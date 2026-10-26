@@ -27,7 +27,6 @@ namespace TaskManagerPro
                                         | NativeMethods.PROCESS_DUP_HANDLE;
         private const long MinWorkingSetBytes = LimitPolicy.MinMemoryPerProcessMB * 1024L * 1024L; // never squeeze a process below this
         private const double Hysteresis = 0.8;                    // stop throttling below 80% of the limit
-        private const double MemoryRelease = 0.80;                // lift the memory caps below 80% of the limit
         private const double MemoryTolerance = 0.01;              // ignore cap changes smaller than 1%
         private const int IoVeryLow = 0, IoLow = 1, IoNormal = 2;
 
@@ -218,7 +217,7 @@ namespace TaskManagerPro
             // Memory: measured like the Memory column (private working set of all the app's processes).
             long ramLimit = (long)rule.MaxRamMB * 1024L * 1024L;
             bool overRam = rule.MaxRamMB > 0 && g.PrivateBytes > ramLimit;
-            if (rule.MaxRamMB <= 0 || g.PrivateBytes < ramLimit * MemoryRelease) gs.MemoryCapped = false;
+            if (rule.MaxRamMB <= 0) gs.MemoryCapped = false;
             else if (overRam) gs.MemoryCapped = true;
             double scale = gs.MemoryCapped ? (double)ramLimit / Math.Max(1, g.PrivateBytes) : 0;
 
@@ -354,9 +353,10 @@ namespace TaskManagerPro
         ///  - Once over: every process gets a hard working-set maximum of its use × limit ÷ app total
         ///    (busy processes keep a bigger share). Recomputed at every check, so the caps always add up
         ///    to the whole limit: above it they shrink the app back, below it they grow and leave room.
-        ///    The caps only bite when the app tries to go over its limit; it is never held below it.
+        ///    The caps only bite when the app tries to go over its limit; it is never pushed below it.
         ///    New processes start free and are included at the next check.
-        ///  - Below 80% of the limit the caps are lifted completely.
+        ///  - The caps are not lifted while the limit exists (lifting would let the app jump over the
+        ///    limit and be pulled back again); removing the limit or pausing lifts them.
         /// Returns the wanted maximum in bytes, 0 = no cap.
         /// </summary>
         private static long MemoryCap(GroupState gs, ProcState st, ProcInfo p, double scale)
