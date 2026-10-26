@@ -162,6 +162,8 @@ The output goes to `build\TaskManagerPro.exe` (plus `TaskManagerPro.exe.config`)
 | `--autostart` | Used by the sign-in task: starts the engine if limits are set, so limits survive a restart |
 | `--exit` | Closes Task Manager Pro (window and background engine). Limits stay on the apps |
 | `--release-all` | Restores every limited app and removes all persistent limits (used by the uninstaller) |
+| `--restore-all` | Emergency: puts every app back to normal and pauses all limits (they are kept) |
+| `--toast <kind> "<title>" "<text>"` | Shows one notice card (used by the background engine); kind is info, success, warning or error |
 
 ---
 
@@ -178,7 +180,9 @@ The output goes to `build\TaskManagerPro.exe` (plus `TaskManagerPro.exe.config`)
 
 Invalid input is rejected with a message, and nothing is saved:
 - letters, negative numbers, or CPU over 100%
-- **a value below the app's own minimum.** For example: *"The lowest memory limit for Google Chrome is 624 MB (half of what it normally uses, about 1,240 MB of memory)."*
+- **a value below the app's own minimum.** For example: *"Lowest for Google Chrome: 310 MB (a quarter of its use now). Less could stop it working."*
+
+Messages appear as a notice card in the bottom-right corner. A ring around its icon shows how long it stays (3 minutes; it waits while the mouse is over the card); ✕ closes it.
 
 ### Keyboard
 | Key | Action |
@@ -250,8 +254,8 @@ We can't know in advance which apps someone uses, so there is **no fixed list of
 - **Learning:** while an app runs **without a limit**, Task Manager Pro records what it normally uses: memory, CPU, disk and network.
   - It takes at most one sample every 15 seconds, as a moving average.
   - Apps that have a limit are never sampled, so a limit can't drag its own minimum down.
-- **No limit can go below half of the app's normal use.** Example: if Chrome normally uses about 1,240 MB, its memory limit can't be set below 624 MB.
-- **Before an app has been learned:** half of what it uses right now is the minimum. With no data at all, only the Windows-level floors apply:
+- **No limit can go below a quarter of what the app uses.** While it runs without a limit, its use right now counts; otherwise its learned normal use. Example: if Chrome uses about 1,240 MB now, its memory limit can't be set below 310 MB.
+- With no data at all, only the Windows-level floors apply:
   - CPU: half of one logical processor
   - memory: 32 MB per process (at least 64 MB)
   - disk: 1 MB/s
@@ -344,6 +348,7 @@ Task Manager Pro/
 │       ├── Theme.cs             light/dark palettes, system theme detection
 │       ├── ProcessMetadata.cs   app names (descriptions) and icons
 │       ├── PackagedApps.cs      names and logos of Store / MSIX apps
+│       ├── Toast.cs             notice cards (every notice in the app)
 │       ├── SystemMonitors.cs    network (ETW), disk active time, window detection
 │       └── ProcessActions.cs    End task, Properties, Open file location, Run new task
 ├── docs/
@@ -409,7 +414,7 @@ Yes. At sign-in Windows starts the small engine (only when limits are set), whic
 Some processes (for example anti-virus) are protected by Windows itself. No task manager can change them.
 
 **Why can't I set a lower limit?**
-Each app has a minimum: half of what it normally uses, learned while it ran without a limit. Less could stop it from starting or keep it from working. The hint shown when you open a Max box tells you the minimum and where it comes from.
+Each app has a minimum: a quarter of what it uses now (or normally, if it isn't running). Less could stop it from starting or keep it from working. The notice shown when you open a Max box tells you the minimum and where it comes from.
 
 **A yellow bar says the limits file was changed.**
 Something other than Task Manager Pro changed `limits.cfg`. Its limits are not applied until you click **Review limits** and confirm them.

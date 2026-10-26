@@ -19,6 +19,7 @@ namespace TaskManagerPro
     ///   --update-check   weekly scheduled task: installs a newer GitHub release if there is one
     ///   --register-updates  (installer) creates or removes the sign-in and weekly update tasks per the settings
     ///   --restore-all    emergency: closes the window, restores every app and pauses all limits
+    ///   --toast kind title message   shows one notice card (used by the background engine)
     /// This class must not touch WinForms types, so the engine never loads WinForms.
     /// </summary>
     internal static class Program
@@ -32,6 +33,7 @@ namespace TaskManagerPro
             try
             {
                 if (HasArg(args, "--ui")) return RunUi();
+                if (HasArg(args, "--toast")) return RunToast(args);
                 if (HasArg(args, "--engine")) return Engine.Run(HasArg(args, "--show"));
                 if (HasArg(args, StartupManager.AutostartArg))
                     return Engine.Needed() ? Engine.Run(false) : 0;
@@ -97,11 +99,8 @@ namespace TaskManagerPro
             }
             NetworkQos.Flush(60000);
             if (quiet) return 0;
-            MessageBox(IntPtr.Zero,
-                "All apps are back to normal and every limit is paused.\n\n" +
-                "Your limits are kept. To use them again, open Task Manager Pro and click \"Resume limits\".",
-                AppName, 0x40 /* MB_ICONINFORMATION */);
-            return 0;
+            return RunToast(new[] { "--toast", "success", "All apps are back to normal",
+                "Your limits are paused, not deleted. Click Resume limits to use them again." });
         }
 
         /// <summary>Closes the window and the engine gracefully (installer / updates). Limits stay.</summary>
@@ -133,13 +132,19 @@ namespace TaskManagerPro
             }
         }
 
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        private static extern int MessageBox(IntPtr owner, string text, string caption, uint type);
-
         [MethodImpl(MethodImplOptions.NoInlining)] // keeps WinForms out of Main's JIT
         private static int RunUi()
         {
             return UiApp.Run();
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static int RunToast(string[] args)
+        {
+            int i = Array.IndexOf(args, "--toast");
+            return Toast.RunStandalone(i + 1 < args.Length ? args[i + 1] : null,
+                                       i + 2 < args.Length ? args[i + 2] : null,
+                                       i + 3 < args.Length ? args[i + 3] : null);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

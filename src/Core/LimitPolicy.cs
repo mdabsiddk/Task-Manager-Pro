@@ -19,8 +19,9 @@ namespace TaskManagerPro
     /// <summary>
     /// Safety floors for limits. Every app needs some CPU, memory, disk and network to start and stay
     /// responsive, and that amount is different for every app, so the floor is computed from the app's
-    /// own data rather than from a fixed list: a limit can never be lower than HALF of what the app
-    /// normally uses (learned while it runs without a limit, see <see cref="AppProfileStore"/>). Before
+    /// own data rather than from a fixed list: a limit can never be lower than A QUARTER of what the app
+    /// uses right now (while it runs without a limit), or else of what it normally uses (learned while
+    /// it runs without a limit, see <see cref="AppProfileStore"/>). Before
     /// there is any data, only Windows-level floors apply (half a logical processor, 32 MB per process).
     /// The floors are enforced for limits typed in the window, for limits.cfg on every load (so a
     /// tampered file can't starve an app) and inside the governor itself.
@@ -28,7 +29,7 @@ namespace TaskManagerPro
     internal static class LimitPolicy
     {
         /// <summary>Fraction of an app's normal use that a limit may never go below.</summary>
-        public const double ShareOfTypicalUse = 0.5;
+        public const double ShareOfTypicalUse = 0.25;
 
         // Windows-level floors: what any process needs, independent of the app.
         public const int MinMemoryPerProcessMB = 32;
@@ -51,8 +52,8 @@ namespace TaskManagerPro
 
         /// <summary>
         /// Floors for one app. <paramref name="current"/> (optional) is the running app: its process count
-        /// raises the memory floor, and if there is no learned profile yet and the app is running without
-        /// a limit, what it uses right now stands in for its typical use.
+        /// raises the memory floor, and while it runs without a limit, what it uses right now is the base.
+        /// Otherwise (not running, or already limited, so its use is held down) the learned profile is.
         /// </summary>
         public static LimitFloors FloorsFor(AppProfile profile, ProcessGroup current, bool currentlyLimited)
         {
@@ -67,21 +68,21 @@ namespace TaskManagerPro
             };
 
             double mem, cpu, disk, net;
-            if (profile != null && profile.Samples >= MinProfileSamples)
-            {
-                mem = profile.MemoryMB;
-                cpu = profile.CpuPercent;
-                disk = profile.DiskMBps;
-                net = profile.NetKBps;
-                f.Basis = "learned";
-            }
-            else if (current != null && !currentlyLimited)
+            if (current != null && !currentlyLimited)
             {
                 mem = current.PrivateBytes / (1024.0 * 1024.0);
                 cpu = current.CpuPercent;
                 disk = current.DiskBytesPerSec / (1024.0 * 1024.0);
                 net = current.NetBytesPerSec / 1024.0;
                 f.Basis = "current";
+            }
+            else if (profile != null && profile.Samples >= MinProfileSamples)
+            {
+                mem = profile.MemoryMB;
+                cpu = profile.CpuPercent;
+                disk = profile.DiskMBps;
+                net = profile.NetKBps;
+                f.Basis = "learned";
             }
             else
             {
@@ -120,9 +121,8 @@ namespace TaskManagerPro
         public static string CheckCpu(int percent, LimitFloors f, string app)
         {
             if (percent == 0) return null;
-            if (percent > 100) return "CPU limit can't be more than 100%.";
-            if (percent < f.CpuPercent)
-                return "The lowest CPU limit for " + app + " is " + f.CpuPercent + "% (" + Reason(f) + "), or leave it empty for no limit.";
+            if (percent > 100) return "CPU can't be more than 100%.";
+            if (percent < f.CpuPercent) return "Lowest for " + app + ": " + f.CpuPercent + "% (" + Reason(f) + ").";
             return null;
         }
 
@@ -131,8 +131,7 @@ namespace TaskManagerPro
             if (mb == 0) return null;
             if (mb > MaxMemoryMB) return "That memory limit is too large.";
             if (mb < f.MemoryMB)
-                return "The lowest memory limit for " + app + " is " + f.MemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB (" + Reason(f)
-                       + "). Less could stop it from starting. Leave it empty for no limit.";
+                return "Lowest for " + app + ": " + f.MemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB (" + Reason(f) + "). Less could stop it working.";
             return null;
         }
 
@@ -140,7 +139,7 @@ namespace TaskManagerPro
         {
             if (mbps == 0) return null;
             if (mbps > MaxDiskMBps) return "That disk limit is too large.";
-            if (mbps < f.DiskMBps) return "The lowest disk limit for " + app + " is " + f.DiskMBps + " MB/s (" + Reason(f) + "), or leave it empty for no limit.";
+            if (mbps < f.DiskMBps) return "Lowest for " + app + ": " + f.DiskMBps + " MB/s (" + Reason(f) + ").";
             return null;
         }
 
@@ -149,19 +148,32 @@ namespace TaskManagerPro
             if (kbps == 0) return null;
             if (kbps > MaxNetKBps) return "That network limit is too large.";
             if (kbps < f.NetKBps)
-                return "The lowest network limit for " + app + " is " + Mbps(f.NetKBps) + " Mbps (" + Reason(f) + "). Less could cut its connection. Leave it empty for no limit.";
+                return "Lowest for " + app + ": " + Mbps(f.NetKBps) + " Mbps (" + Reason(f) + "). Less could cut its connection.";
             return null;
         }
 
-        /// <summary>Short text for the hint shown when a limit box is opened.</summary>
+        /// <summary>Short text for the notice shown when a limit box is opened.</summary>
         public static string Describe(LimitFloors f, string column)
+        {
+            string lowest;
+            switch (column)
+            {
+                case "cpu": lowest = f.CpuPercent + "%"; break;
+                case "memory": lowest = f.MemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB"; break;
+                case "disk": lowest = f.DiskMBps + " MB/s"; break;
+                default: lowest = Mbps(f.NetKBps) + " Mbps"; break;
+            }
+            return "Lowest: " + lowest + " (" + Reason(f) + "). Empty = no limit.";
+        }
+
+        public static string ResourceName(string column)
         {
             switch (column)
             {
-                case "cpu": return "Lowest allowed: " + f.CpuPercent + "%  (" + Reason(f) + ")";
-                case "memory": return "Lowest allowed: " + f.MemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB  (" + Reason(f) + ")";
-                case "disk": return "Lowest allowed: " + f.DiskMBps + " MB/s  (" + Reason(f) + ")";
-                default: return "Lowest allowed: " + Mbps(f.NetKBps) + " Mbps  (" + Reason(f) + ")";
+                case "cpu": return "CPU";
+                case "memory": return "Memory";
+                case "disk": return "Disk";
+                default: return "Network";
             }
         }
 
@@ -175,11 +187,11 @@ namespace TaskManagerPro
             switch (f.Basis)
             {
                 case "learned":
-                    return "half of what it normally uses" + (f.TypicalMemoryMB > 0 ? ", about " + f.TypicalMemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB of memory" : "");
+                    return "a quarter of its usual use";
                 case "current":
-                    return "half of what it uses right now" + (f.TypicalMemoryMB > 0 ? ", " + f.TypicalMemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB of memory" : "");
+                    return "a quarter of its use now";
                 default:
-                    return "no usage data for this app yet, so only the Windows minimum applies";
+                    return "the Windows minimum";
             }
         }
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.5.0 (2026-10-27)
+
+- **Memory caps only bite when the app tries to go over its limit.** Once an app has gone over, its caps are recomputed at every check so they always add up to the whole limit: the app is pulled back to the limit, but never held below it. Below 70% of the limit the caps are lifted completely (was 85%).
+  - Measured (Chrome-like test app, 926 MB): 600 MB limit → 603 MB; then 800 MB → the caps grow and the app uses 799 MB; then 1500 MB → caps lifted, 904 MB.
+- **Lower minimum limits:** a limit may now go down to a quarter (25%) of what the app uses right now (was half of its usual use). When the app isn't running or is already limited, a quarter of its learned usual use applies. The Windows-level floors stay.
+  - Saved limits are no longer raised when they are loaded again; a limits file changed from outside is still held to the app's learned minimum.
+- **New notice cards (toasts)** for every notice in the app: bottom-right above the taskbar, in the current theme, with a countdown ring around the icon (3 minutes; paused while the mouse is over the card) and a ✕ button. Up to three stack; they never take the focus. Limit hints, errors, update and save messages, and the engine's notices (which were tray balloons) all use them, with shorter wording. Questions that need a Yes/No answer stay dialogs.
+
 ## 2.4.0 (2026-10-23)
 
 - **Memory limits use the whole limit.** The limit is now one budget for the whole app (all its processes), measured like the Memory column:

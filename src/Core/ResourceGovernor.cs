@@ -27,7 +27,7 @@ namespace TaskManagerPro
                                         | NativeMethods.PROCESS_DUP_HANDLE;
         private const long MinWorkingSetBytes = LimitPolicy.MinMemoryPerProcessMB * 1024L * 1024L; // never squeeze a process below this
         private const double Hysteresis = 0.8;                    // stop throttling below 80% of the limit
-        private const double MemoryRelease = 0.85;                // lift the memory caps below 85% of the limit
+        private const double MemoryRelease = 0.70;                // lift the memory caps below 70% of the limit
         private const double MemoryTolerance = 0.01;              // ignore cap changes smaller than 1%
         private const int IoVeryLow = 0, IoLow = 1, IoNormal = 2;
 
@@ -220,7 +220,7 @@ namespace TaskManagerPro
             bool overRam = rule.MaxRamMB > 0 && g.PrivateBytes > ramLimit;
             if (rule.MaxRamMB <= 0 || g.PrivateBytes < ramLimit * MemoryRelease) gs.MemoryCapped = false;
             else if (overRam) gs.MemoryCapped = true;
-            double shrink = overRam ? (double)ramLimit / g.PrivateBytes : 0;
+            double scale = gs.MemoryCapped ? (double)ramLimit / Math.Max(1, g.PrivateBytes) : 0;
 
             int considered = 0, denied = 0;
             foreach (ProcInfo p in g.Processes)
@@ -237,7 +237,7 @@ namespace TaskManagerPro
                     continue;
                 }
 
-                long wsMax = MemoryCap(gs, st, p, shrink);
+                long wsMax = MemoryCap(gs, st, p, scale);
                 bool joinJob = haveJob && !st.InJob && !st.JobFailed;
                 int wantCores = capOn && !st.JobFailed ? 0 : fallbackCores;
                 if (!joinJob && !NeedsWork(st, wantPriority, wantCores, wantIo, wsMax)) continue;
@@ -350,18 +350,19 @@ namespace TaskManagerPro
         /// equally starved the big processes (with 25 Chrome processes, 1000 MB meant 40 MB each for
         /// the browser and GPU processes, which need hundreds) while the small ones left their share
         /// unused, so the app stayed far below its limit and became slow.
-        ///  - Below the limit: no cap at all, the app runs at full speed.
-        ///  - Above the limit: every process gets a hard working-set maximum in proportion to what it
-        ///    uses now (busy processes keep a bigger share), scaled so the app as a whole fits the limit.
+        ///  - Until the app first goes over its limit: no cap at all, it runs at full speed.
+        ///  - Once over: every process gets a hard working-set maximum of its use × limit ÷ app total
+        ///    (busy processes keep a bigger share). Recomputed at every check, so the caps always add up
+        ///    to the whole limit: above it they shrink the app back, below it they grow and leave room.
+        ///    The caps only bite when the app tries to go over its limit; it is never held below it.
         ///    New processes start free and are included at the next check.
-        ///  - Between 85% and 100%: the caps are kept (no flapping); below 85% they are lifted.
+        ///  - Below 70% of the limit the caps are lifted completely.
         /// Returns the wanted maximum in bytes, 0 = no cap.
         /// </summary>
-        private static long MemoryCap(GroupState gs, ProcState st, ProcInfo p, double shrink)
+        private static long MemoryCap(GroupState gs, ProcState st, ProcInfo p, double scale)
         {
-            if (!gs.MemoryCapped) return 0;
-            if (shrink <= 0) return st.AppliedWsMax; // within the limit: keep what is set
-            long cap = Math.Max(MinWorkingSetBytes, (long)(p.WorkingSet * shrink));
+            if (!gs.MemoryCapped || scale <= 0) return 0;
+            long cap = Math.Max(MinWorkingSetBytes, (long)(p.WorkingSet * scale));
             if (st.AppliedWsMax > 0 && Math.Abs(cap - st.AppliedWsMax) < st.AppliedWsMax * MemoryTolerance) return st.AppliedWsMax;
             return cap;
         }

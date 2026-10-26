@@ -148,8 +148,8 @@ namespace TaskManagerPro
             limits.SyncPersistent();
             if (limits.Rules.NeedsReview)
             {
-                ShowBalloon("Limits need your review",
-                    "The limits file was changed outside Task Manager Pro, so its limits are not applied. Open Task Manager Pro to review them.");
+                ShowToast("warning", "Limits need your review",
+                    "The limits file was changed outside Task Manager Pro, so it isn't used yet. Click here to review it.");
             }
 
             if (showUi) ShowUi();
@@ -373,8 +373,8 @@ namespace TaskManagerPro
             if (!limits.TrayHintShown)
             {
                 limits.TrayHintShown = true;
-                ShowBalloon("Task Manager Pro keeps your limits",
-                    "Your limits also apply to apps you open later and after a restart. Click the icon to open Task Manager Pro.");
+                ShowToast("success", "Your limits stay on",
+                    "They also apply to apps you open later and after a restart. The tray icon opens Task Manager Pro.");
             }
             NativeMethods.TrimWorkingSet();
         }
@@ -555,14 +555,21 @@ namespace TaskManagerPro
             Native.Shell_NotifyIcon(Native.NIM_MODIFY, ref data);
         }
 
-        private void ShowBalloon(string title, string text)
+        /// <summary>
+        /// Notices use the app's own toast card. The engine stays free of WinForms, so a short-lived
+        /// "--toast" process shows the card and exits when it closes.
+        /// </summary>
+        private void ShowToast(string kind, string title, string text)
         {
-            if (!iconAdded) return;
-            var data = NewIconData(Native.NIF_INFO);
-            data.szInfoTitle = title;
-            data.szInfo = text;
-            data.dwInfoFlags = 1; // NIIF_INFO
-            Native.Shell_NotifyIcon(Native.NIM_MODIFY, ref data);
+            IntPtr h;
+            int pid;
+            string args = "--toast " + kind + " " + Quote(title) + " " + Quote(text);
+            if (NativeMethods.RunProcess(exePath, args, false, 0, out h, out pid) == 0) NativeMethods.CloseHandle(h);
+        }
+
+        private static string Quote(string s)
+        {
+            return "\"" + (s ?? "").Replace("\"", "'") + "\"";
         }
 
         /// <summary>user32 / shell32 declarations needed only by the engine.</summary>

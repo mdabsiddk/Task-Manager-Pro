@@ -12,9 +12,10 @@ namespace TaskManagerPro
     /// Tamper protection: every save ends with a "#seal:" line, an HMAC-SHA256 of the rules made
     /// with a secret key that only administrators can read. A file that was written by anything
     /// else (another program, malware, a hand edit, an old version) is loaded as "needs review":
-    /// none of its limits are applied until the user confirms them in the window. Every rule is also
-    /// raised to at least the app's own minimum (<see cref="LimitPolicy"/>), so even a confirmed file can't
-    /// starve an app or limit a Windows component.
+    /// none of its limits are applied until the user confirms them in the window, and its rules are
+    /// raised to at least the app's own learned minimum (<see cref="LimitPolicy"/>), so even a confirmed
+    /// file can't starve an app. Rules of a sealed file get the Windows-level floor; no file can limit a
+    /// Windows component.
     ///
     /// Format, one rule per line (compatible with v1): app|maxCpu%|maxMemoryMB|maxDiskMBps|maxNetworkKBps
     /// </summary>
@@ -114,6 +115,7 @@ namespace TaskManagerPro
                 if (File.Exists(AppPaths.RulesFile))
                 {
                     var body = new List<string>();
+                    var parsedRules = new List<ProcessRule>();
                     string seal = null;
                     foreach (string raw in File.ReadAllLines(AppPaths.RulesFile))
                     {
@@ -122,13 +124,22 @@ namespace TaskManagerPro
                         if (line.Length == 0 || line.StartsWith("#")) continue;
                         body.Add(line);
                         ProcessRule parsed = ParseLine(line);
-                        ProcessRule rule = parsed != null && LimitPolicy.IsValidName(parsed.Name)
-                            ? LimitPolicy.Sanitize(parsed, Floors(parsed.Name.Trim()))
-                            : null;
+                        if (parsed != null && LimitPolicy.IsValidName(parsed.Name)) parsedRules.Add(parsed);
+                    }
+
+                    // A sealed file was written by Task Manager Pro after the window checked every value
+                    // against the app's minimum at that moment, so only the Windows-level floor applies
+                    // again (otherwise a limit set while the app used little could be raised later).
+                    // A file changed from outside is held to the app's own learned minimum.
+                    bool sealedByUs = body.Count == 0 || Seal.Matches(body, seal);
+                    foreach (ProcessRule parsed in parsedRules)
+                    {
+                        string name = parsed.Name.Trim();
+                        ProcessRule rule = LimitPolicy.Sanitize(parsed, sealedByUs ? LimitPolicy.FloorsFor(null, null, false) : Floors(name));
                         if (rule != null && (map.ContainsKey(rule.Name) || map.Count < LimitPolicy.MaxRules)) map[rule.Name] = rule;
                     }
 
-                    if (body.Count > 0 && !Seal.Matches(body, seal))
+                    if (!sealedByUs)
                     {
                         Log.Write("limits.cfg was changed outside Task Manager Pro: its limits are not applied until reviewed.");
                         pending = new List<ProcessRule>(map.Values);

@@ -99,10 +99,9 @@ The memory limit applies to the app's **total** private working set (the Memory 
 
 | App's total | What happens |
 |---|---|
-| below the limit | no cap: the app runs at full speed |
-| above the limit | each process gets a hard working-set maximum of `its working set × limit ÷ app total` (at least 32 MB), so busy processes keep a bigger share and the app as a whole fits the limit. Changes under 1% are skipped. |
-| between 85% and 100% after capping | the caps stay as they are (no flapping) |
-| below 85% | the caps are lifted |
+| never above the limit yet | no cap: the app runs at full speed |
+| once above the limit | each process gets a hard working-set maximum of `its working set × limit ÷ app total` (at least 32 MB), recomputed at every check. The caps always add up to the whole limit: above it they shrink the app back, below it they grow and leave room. So they only bite when the app tries to go over its limit, and the app is never held below it. Changes under 1% are skipped. |
+| below 70% of the limit | the caps are lifted completely |
 
 The window re-checks with every refresh, and the engine every 5 seconds while a memory limit exists (one sample, about 5 ms).
 
@@ -113,7 +112,8 @@ Measured with a Chrome-like test app (13 processes: 300 + 2 × 200 + 10 × 20 MB
 | Limit | Result |
 |---|---|
 | 600 MB | 926 → 697 → 630 → 603 MB within 3 s, then steady; biggest processes 163, 110, 110 MB (the old method would have capped every process at 46 MB) |
-| 1500 MB | caps lifted at once; back to 905 MB, every process at its full size |
+| then 800 MB | the caps grow: 603 → 728 → 778 → 799 MB; the app uses the whole limit (biggest 246, 167, 167 MB) |
+| then 1500 MB | below 70%: caps lifted at once; back to 904 MB, every process at its full size |
 
 ### Why limits survive closing the app
 
@@ -152,9 +152,11 @@ The kernel applies these values at process creation. They are synced on every ru
 
 | Situation | Floor |
 |---|---|
-| Learned profile (at least 3 samples) | ½ × typical use |
-| No profile yet, app running unlimited | ½ × current use |
+| App running without a limit | ¼ × current use |
+| Not running, or already limited (its use is held down): learned profile (at least 3 samples) | ¼ × typical use |
 | No data at all | Windows-level floor only |
+
+`RuleStore.Load` applies only the Windows-level floor to a sealed `limits.cfg` (its values were checked in the window when they were set, so a limit set while the app used little is not raised later), and the app's learned floor to an unsealed one.
 
 In every case the floor is at least the Windows-level floor:
 
@@ -181,7 +183,7 @@ The governor also never sets a job cap below ½ core or a working set below 32 M
 - **`limits.cfg` without a valid seal:**
   - the rules go to `PendingReview` (sanitized) and **nothing is applied**
   - `SetRule` refuses to overwrite the file
-  - the window shows the review bar; the engine shows a tray balloon
+  - the window shows the review bar; the engine shows a toast card
   - *Accept* re-seals the file; *Reject* keeps a `limits.rejected-<time>.cfg` copy and starts empty
 - **`profiles.cfg` without a valid seal:** it is ignored and relearned.
 
@@ -250,6 +252,15 @@ Like Task Manager, every process gets a name and an icon:
 | No icon at all | Windows programs: the Windows icon; `svchost`: a gear; anything else: the generic application icon. |
 
 A system program running with a client's package identity (for example `RuntimeBroker`) keeps its own name and icon, because its file is not inside the package folder.
+
+### Notices (`Toast`)
+
+Every notice is a toast card (`UI/Toast.cs`); there are no message boxes for information, only for questions that need an answer (Yes/No).
+
+- **Where:** bottom-right of the primary screen's work area, above the taskbar. Up to 3 cards stack, newest at the bottom.
+- **Look:** follows the theme live; rounded corners (DWM on Windows 11) and a drop shadow; header with the app icon, *Task Manager Pro*, the time left and a ✕ button; a notice icon (info, success, warning, error) inside a **countdown ring** that empties over the card's **3 minutes**.
+- **Behaviour:** `WS_EX_NOACTIVATE` + `ShowWithoutActivation`, so it never takes the focus; no taskbar button; slides in and fades out; hovering pauses the countdown (shows *paused*); ✕ or a click closes it; a click on the card can run an action (the engine's cards open the window). A card with the same key replaces the earlier one, so the limit hint for the box being edited is always a single card. The ring repaints only its own area every 100 ms.
+- **From the engine:** the engine has no WinForms, so it starts `TaskManagerPro.exe --toast <kind> "<title>" "<text>"`, a short-lived process that exits when its card closes. `--restore-all` confirms with a card the same way.
 
 ### Header totals
 

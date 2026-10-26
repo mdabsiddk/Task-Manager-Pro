@@ -216,8 +216,7 @@ namespace TaskManagerPro
                 {
                     SafeInvoke(delegate
                     {
-                        MessageBox.Show(this, "Could not check for updates. Is the internet connected?\n\n" + ex.Message,
-                            Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        Toast.Show("Couldn't check for updates", "Check your internet connection and try again.", ToastKind.Warning, "update", null);
                     });
                 }
                 return;
@@ -228,7 +227,7 @@ namespace TaskManagerPro
                 if (update == null)
                 {
                     if (manual)
-                        MessageBox.Show(this, "You have the latest version (" + AppVersion.Current + ").", Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        Toast.Show("You're up to date", "Task Manager Pro " + AppVersion.Text + " is the latest version.", ToastKind.Success, "update", null);
                     return;
                 }
                 pendingUpdate = update;
@@ -311,7 +310,7 @@ namespace TaskManagerPro
             bool ok = answer == DialogResult.Yes ? limits.AcceptReview() : limits.RejectReview();
             if (engineRunning) Ipc.Signal(Ipc.ConfigEvent);
             if (!ok)
-                MessageBox.Show(this, "The limits file could not be saved. Details: " + AppPaths.LogFile, Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Toast.Show("Limits not saved", "Windows didn't allow writing the limits file. Details are in error.log.", ToastKind.Error);
             UpdateReviewBar();
             RebuildRows();
             RequestRefresh();
@@ -363,9 +362,10 @@ namespace TaskManagerPro
             {
                 if (e.Row.Group == null) return;
                 LimitFloors floors = limits.FloorsFor(e.Row.Group.Name, e.Row.Group);
-                list.ShowHint(LimitPolicy.Describe(floors, FloorKind(e.Column.Key)), e.ScreenLocation);
+                string kind = FloorKind(e.Column.Key);
+                list.ShowHint(AppLabel(e.Row) + ": " + LimitPolicy.ResourceName(kind) + " limit", LimitPolicy.Describe(floors, kind), ToastKind.Info);
             };
-            list.EditBlocked += (s, e) => list.ShowHint(BlockedReason(e.Row), e.ScreenLocation);
+            list.EditBlocked += (s, e) => list.ShowHint("Can't limit " + AppLabel(e.Row), BlockedReason(e.Row), ToastKind.Info);
             list.SelectionChanged += delegate { UpdateButtons(); };
             list.ColumnsResized += delegate { SaveColumnWidths(); };
         }
@@ -1081,7 +1081,15 @@ namespace TaskManagerPro
             string name = row.Group != null ? row.Group.Name : "";
             return ProtectedProcesses.IsSelf(name)
                 ? "Task Manager Pro can't limit itself."
-                : "This is part of Windows. Limits can't be set on it, to keep the system stable.";
+                : "It is part of Windows. Limiting it could make Windows unstable.";
+        }
+
+        /// <summary>The app's name as shown in the list, without the "(3)" process count.</summary>
+        private static string AppLabel(ListRow row)
+        {
+            string app = row.Text ?? "";
+            int paren = app.LastIndexOf(" (", StringComparison.Ordinal);
+            return paren > 0 ? app.Substring(0, paren) : app;
         }
 
         private void List_LimitEdited(object sender, LimitEditEventArgs e)
@@ -1090,7 +1098,7 @@ namespace TaskManagerPro
             if (g == null) return;
             if (limits.Rules.NeedsReview)
             {
-                e.Error = "First review the limits file that was changed outside Task Manager Pro (yellow bar at the top).";
+                e.Error = "First review the changed limits file (yellow bar at the top).";
                 return;
             }
             string text = e.Text.Replace(",", "").Replace("%", "").Replace("Mbps", "").Replace("MB/s", "").Replace("MB", "").Trim();
@@ -1101,21 +1109,19 @@ namespace TaskManagerPro
                 double mbps = 0;
                 if (text.Length > 0 && (!double.TryParse(text, NumberStyles.Float, Inv, out mbps) || mbps < 0))
                 {
-                    e.Error = "Enter the upload limit in Mbps (for example 2 or 0.5), or leave it empty for no limit.";
+                    e.Error = "Type the upload speed in Mbps, for example 2 or 0.5. Empty = no limit.";
                     return;
                 }
                 value = mbps <= 0 ? 0 : Math.Max(1, (int)Math.Round(mbps * 1e6 / 8 / 1024));
             }
             else if (text.Length > 0 && (!int.TryParse(text, NumberStyles.Integer, Inv, out value) || value < 0))
             {
-                e.Error = "Enter a whole number, or leave it empty for no limit.";
+                e.Error = "Type a whole number. Empty = no limit.";
                 return;
             }
             // The lowest allowed limit comes from this app's own usage (never a fixed list).
             LimitFloors floors = limits.FloorsFor(g.Name, g);
-            string app = e.Row.Text;
-            int paren = app.LastIndexOf(" (", StringComparison.Ordinal);
-            if (paren > 0) app = app.Substring(0, paren);
+            string app = AppLabel(e.Row);
             switch (e.Column.Key)
             {
                 case ColMaxCpu: e.Error = LimitPolicy.CheckCpu(value, floors, app); break;
@@ -1145,8 +1151,7 @@ namespace TaskManagerPro
             if (!local) Ipc.Signal(Ipc.ConfigEvent);
             if (!saved)
             {
-                MessageBox.Show(this, "The limit could not be saved to:\n" + AppPaths.RulesFile + "\n\nDetails: " + AppPaths.LogFile,
-                    Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Toast.Show("Limit not saved", "Windows didn't allow writing the limits file. Details are in error.log.", ToastKind.Error);
             }
             RebuildRows();
             RequestRefresh();
@@ -1165,7 +1170,7 @@ namespace TaskManagerPro
             int count = limits.Rules.Count;
             if (count == 0)
             {
-                MessageBox.Show(this, "No limits are set.", Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Toast.Show("No limits set", "There is nothing to remove.", ToastKind.Info);
                 return;
             }
             if (MessageBox.Show(this, string.Format(Inv, "Remove the limits of all {0} apps?\nEvery app goes back to normal right away.", count),
@@ -1191,8 +1196,7 @@ namespace TaskManagerPro
                 {
                     SafeInvoke(delegate
                     {
-                        MessageBox.Show(this, "Windows Task Scheduler did not accept the change. See " + AppPaths.LogFile,
-                            Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        Toast.Show("Setting not saved", "Windows Task Scheduler didn't accept the change. Details are in error.log.", ToastKind.Warning);
                     });
                 }
             });
@@ -1264,13 +1268,12 @@ namespace TaskManagerPro
 
             if (targets.Exists(p => p.Pid == self))
             {
-                MessageBox.Show(this, "To close Task Manager Pro, use Exit in the ••• menu.", Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Toast.Show("That's Task Manager Pro", "To close it, use Exit in the ••• menu.", ToastKind.Info);
                 return;
             }
             if (ProtectedProcesses.IsCritical(name))
             {
-                MessageBox.Show(this, "\"" + row.Text + "\" is a critical Windows process. Ending it would make Windows shut down or sign you out, so it can't be ended.",
-                    Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Toast.Show("Can't end " + row.Text, "Windows needs it. Ending it would shut down Windows or sign you out.", ToastKind.Warning);
                 return;
             }
             if (ProtectedProcesses.IsWindowsComponent(name) &&
@@ -1286,8 +1289,7 @@ namespace TaskManagerPro
                 SafeInvoke(delegate
                 {
                     if (failed > 0)
-                        MessageBox.Show(this, "Some processes of \"" + label + "\" could not be ended (access denied).",
-                            Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        Toast.Show("Not fully ended", "Windows didn't allow ending " + failed + " process" + (failed == 1 ? "" : "es") + " of " + label + ".", ToastKind.Warning);
                     RequestRefresh();
                 });
             });

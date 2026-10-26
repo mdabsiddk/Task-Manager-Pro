@@ -835,7 +835,7 @@ namespace TaskManagerPro
                 if (LimitEdited != null) LimitEdited(this, args);
                 if (args.Error != null)
                 {
-                    tip.Show(args.Error, this, editor.Left, editor.Bottom + S(4), 3500);
+                    Toast.Show("Check this limit", args.Error, ToastKind.Warning, "limit", null);
                     editor.Focus();
                     editor.SelectAll();
                     return;
@@ -887,11 +887,10 @@ namespace TaskManagerPro
             return i >= 0 ? rows[i] : null;
         }
 
-        /// <summary>Shows a short message next to a row (e.g. why a limit can't be set).</summary>
-        public void ShowHint(string text, Point screenLocation)
+        /// <summary>Shows a short notice about the limit being edited (one card at a time).</summary>
+        public void ShowHint(string title, string text, ToastKind kind)
         {
-            Point p = PointToClient(screenLocation);
-            tip.Show(text, this, p.X + S(8), p.Y + S(16), 3500);
+            Toast.Show(title, text, kind, "limit", null);
         }
     }
 }
