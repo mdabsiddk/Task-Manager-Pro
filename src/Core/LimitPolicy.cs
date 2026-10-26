@@ -14,6 +14,10 @@ namespace TaskManagerPro
         public int TypicalMemoryMB;
         /// <summary>"learned" (app profile), "current" (what it uses right now) or "basic" (no app data).</summary>
         public string Basis;
+        /// <summary>Number of processes the memory floor was counted for.</summary>
+        public int Processes;
+        /// <summary>True where the app's own use set the floor; false where the Windows-level floor did.</summary>
+        public bool CpuFromUse, MemoryFromUse, DiskFromUse, NetFromUse;
     }
 
     /// <summary>
@@ -64,7 +68,8 @@ namespace TaskManagerPro
                 MemoryMB = Math.Max(BasicMemoryMB, MinMemoryPerProcessMB * processes),
                 DiskMBps = BasicDiskMBps,
                 NetKBps = BasicNetKBps,
-                Basis = "basic"
+                Basis = "basic",
+                Processes = processes
             };
 
             double mem, cpu, disk, net;
@@ -90,11 +95,18 @@ namespace TaskManagerPro
             }
 
             f.TypicalMemoryMB = (int)Math.Round(mem);
-            f.MemoryMB = Math.Max(f.MemoryMB, RoundUp(mem * ShareOfTypicalUse, 8));
-            f.CpuPercent = Math.Min(100, Math.Max(f.CpuPercent, (int)Math.Ceiling(cpu * ShareOfTypicalUse)));
-            f.DiskMBps = Math.Max(f.DiskMBps, (int)Math.Ceiling(disk * ShareOfTypicalUse));
-            f.NetKBps = Math.Max(f.NetKBps, (int)Math.Ceiling(net * ShareOfTypicalUse));
-            f.MemoryMB = Math.Min(MaxMemoryMB, f.MemoryMB);
+            int memFromUse = RoundUp(mem * ShareOfTypicalUse, 8);
+            int cpuFromUse = (int)Math.Ceiling(cpu * ShareOfTypicalUse);
+            int diskFromUse = (int)Math.Ceiling(disk * ShareOfTypicalUse);
+            int netFromUse = (int)Math.Ceiling(net * ShareOfTypicalUse);
+            f.MemoryFromUse = memFromUse > f.MemoryMB;
+            f.CpuFromUse = cpuFromUse > f.CpuPercent;
+            f.DiskFromUse = diskFromUse > f.DiskMBps;
+            f.NetFromUse = netFromUse > f.NetKBps;
+            f.MemoryMB = Math.Min(MaxMemoryMB, Math.Max(f.MemoryMB, memFromUse));
+            f.CpuPercent = Math.Min(100, Math.Max(f.CpuPercent, cpuFromUse));
+            f.DiskMBps = Math.Max(f.DiskMBps, diskFromUse);
+            f.NetKBps = Math.Max(f.NetKBps, netFromUse);
             return f;
         }
 
@@ -116,13 +128,14 @@ namespace TaskManagerPro
             return safe.IsEmpty ? null : safe;
         }
 
-        // ---------------- Messages for values typed in the window (null = acceptable) ----------------
+        // ---------------- Messages for a value that can't be saved (null = acceptable) ----------------
 
         public static string CheckCpu(int percent, LimitFloors f, string app)
         {
             if (percent == 0) return null;
-            if (percent > 100) return "CPU can't be more than 100%.";
-            if (percent < f.CpuPercent) return "Lowest for " + app + ": " + f.CpuPercent + "% (" + Reason(f) + ").";
+            if (percent > 100) return "A CPU limit can't be more than 100%.";
+            if (percent < f.CpuPercent)
+                return "The lowest CPU limit for " + app + " is " + f.CpuPercent + "% (" + Reason(f, f.CpuFromUse, "half of one processor core") + ").";
             return null;
         }
 
@@ -131,7 +144,13 @@ namespace TaskManagerPro
             if (mb == 0) return null;
             if (mb > MaxMemoryMB) return "That memory limit is too large.";
             if (mb < f.MemoryMB)
-                return "Lowest for " + app + ": " + f.MemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB (" + Reason(f) + "). Less could stop it working.";
+            {
+                string windows = f.Processes > 1 && MinMemoryPerProcessMB * f.Processes > BasicMemoryMB
+                    ? MinMemoryPerProcessMB + " MB for each of its " + f.Processes + " processes"
+                    : "the least any app needs";
+                return "The lowest memory limit for " + app + " is " + f.MemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB ("
+                       + Reason(f, f.MemoryFromUse, windows) + ").";
+            }
             return null;
         }
 
@@ -139,7 +158,8 @@ namespace TaskManagerPro
         {
             if (mbps == 0) return null;
             if (mbps > MaxDiskMBps) return "That disk limit is too large.";
-            if (mbps < f.DiskMBps) return "Lowest for " + app + ": " + f.DiskMBps + " MB/s (" + Reason(f) + ").";
+            if (mbps < f.DiskMBps)
+                return "The lowest disk limit for " + app + " is " + f.DiskMBps + " MB/s (" + Reason(f, f.DiskFromUse, "the least any app needs") + ").";
             return null;
         }
 
@@ -148,33 +168,8 @@ namespace TaskManagerPro
             if (kbps == 0) return null;
             if (kbps > MaxNetKBps) return "That network limit is too large.";
             if (kbps < f.NetKBps)
-                return "Lowest for " + app + ": " + Mbps(f.NetKBps) + " Mbps (" + Reason(f) + "). Less could cut its connection.";
+                return "The lowest network limit for " + app + " is " + Mbps(f.NetKBps) + " Mbps (" + Reason(f, f.NetFromUse, "enough to stay connected") + ").";
             return null;
-        }
-
-        /// <summary>Short text for the notice shown when a limit box is opened.</summary>
-        public static string Describe(LimitFloors f, string column)
-        {
-            string lowest;
-            switch (column)
-            {
-                case "cpu": lowest = f.CpuPercent + "%"; break;
-                case "memory": lowest = f.MemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB"; break;
-                case "disk": lowest = f.DiskMBps + " MB/s"; break;
-                default: lowest = Mbps(f.NetKBps) + " Mbps"; break;
-            }
-            return "Lowest: " + lowest + " (" + Reason(f) + "). Empty = no limit.";
-        }
-
-        public static string ResourceName(string column)
-        {
-            switch (column)
-            {
-                case "cpu": return "CPU";
-                case "memory": return "Memory";
-                case "disk": return "Disk";
-                default: return "Network";
-            }
         }
 
         public static string Mbps(int kbps)
@@ -182,17 +177,11 @@ namespace TaskManagerPro
             return (NetworkQos.ToBitsPerSecond(kbps) / 1e6).ToString("0.##", CultureInfo.InvariantCulture);
         }
 
-        private static string Reason(LimitFloors f)
+        /// <summary>Where the floor came from: the app's own use, or the Windows-level floor.</summary>
+        private static string Reason(LimitFloors f, bool fromUse, string windowsFloor)
         {
-            switch (f.Basis)
-            {
-                case "learned":
-                    return "a quarter of its usual use";
-                case "current":
-                    return "a quarter of its use now";
-                default:
-                    return "the Windows minimum";
-            }
+            if (!fromUse) return windowsFloor;
+            return f.Basis == "learned" ? "a quarter of what it usually uses" : "a quarter of what it uses now";
         }
 
         public static bool IsValidName(string name)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.2 (2026-10-27)
+
+- Notice cards stay **3 seconds** (was 3 minutes); the ring around the icon counts the seconds down smoothly, and hovering still pauses it.
+- **Clear minimum-limit notices, only when needed:** opening a Max box no longer shows a notice. Saving a value below the app's minimum shows *Limit not saved* with the exact lowest value and the real reason, for example "The lowest memory limit for Electron is 128 MB (32 MB for each of its 4 processes)." Earlier the reason could wrongly say "a quarter of its use" when the Windows per-process floor was the higher one.
+
 ## 2.5.1 (2026-10-27)
 
 - Memory caps are now lifted completely only when the app drops below **20%** of its limit (was 70%). Until then the caps always add up to the whole limit, so they only matter when the app tries to go over it. Measured: with a 1500 MB limit the test app got all it wanted (919 MB) while the caps stayed in place.

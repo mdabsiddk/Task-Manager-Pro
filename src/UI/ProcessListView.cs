@@ -835,7 +835,7 @@ namespace TaskManagerPro
                 if (LimitEdited != null) LimitEdited(this, args);
                 if (args.Error != null)
                 {
-                    Toast.Show("Check this limit", args.Error, ToastKind.Warning, "limit", null);
+                    Toast.Show("Limit not saved", args.Error, ToastKind.Warning, "limit", null);
                     editor.Focus();
                     editor.SelectAll();
                     return;

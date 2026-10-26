@@ -146,17 +146,6 @@ namespace TaskManagerPro
             topBar.Resize += delegate { LayoutTopBar(); };
         }
 
-        private static string FloorKind(string column)
-        {
-            switch (column)
-            {
-                case ColMaxCpu: return "cpu";
-                case ColMaxMem: return "memory";
-                case ColMaxDisk: return "disk";
-                default: return "network";
-            }
-        }
-
         /// <summary>Warning strip shown when limits.cfg was changed outside Task Manager Pro.</summary>
         private void BuildReviewBar()
         {
@@ -358,13 +347,6 @@ namespace TaskManagerPro
             list.ContextMenuRequested += (s, e) => ShowRowMenu(e.Row, e.ScreenLocation);
             list.EndTaskRequested += (s, e) => EndTask(e.Row);
             list.LimitEdited += List_LimitEdited;
-            list.EditStarted += (s, e) =>
-            {
-                if (e.Row.Group == null) return;
-                LimitFloors floors = limits.FloorsFor(e.Row.Group.Name, e.Row.Group);
-                string kind = FloorKind(e.Column.Key);
-                list.ShowHint(AppLabel(e.Row) + ": " + LimitPolicy.ResourceName(kind) + " limit", LimitPolicy.Describe(floors, kind), ToastKind.Info);
-            };
             list.EditBlocked += (s, e) => list.ShowHint("Can't limit " + AppLabel(e.Row), BlockedReason(e.Row), ToastKind.Info);
             list.SelectionChanged += delegate { UpdateButtons(); };
             list.ColumnsResized += delegate { SaveColumnWidths(); };

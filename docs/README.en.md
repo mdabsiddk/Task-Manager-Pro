@@ -180,9 +180,9 @@ The output goes to `build\TaskManagerPro.exe` (plus `TaskManagerPro.exe.config`)
 
 Invalid input is rejected with a message, and nothing is saved:
 - letters, negative numbers, or CPU over 100%
-- **a value below the app's own minimum.** For example: *"Lowest for Google Chrome: 310 MB (a quarter of its use now). Less could stop it working."*
+- **a value below the app's own minimum.** The notice names the exact minimum and why, for example: *"The lowest memory limit for Electron is 128 MB (32 MB for each of its 4 processes)."* or *"The lowest memory limit for Everything is 400 MB (a quarter of what it uses now)."*
 
-Messages appear as a notice card in the bottom-right corner. A ring around its icon shows how long it stays (3 minutes; it waits while the mouse is over the card); ✕ closes it.
+Messages appear as a notice card in the bottom-right corner. A ring around its icon shows how long it stays (3 seconds; it waits while the mouse is over the card); ✕ closes it.
 
 ### Keyboard
 | Key | Action |
@@ -414,7 +414,7 @@ Yes. At sign-in Windows starts the small engine (only when limits are set), whic
 Some processes (for example anti-virus) are protected by Windows itself. No task manager can change them.
 
 **Why can't I set a lower limit?**
-Each app has a minimum: a quarter of what it uses now (or normally, if it isn't running). Less could stop it from starting or keep it from working. The notice shown when you open a Max box tells you the minimum and where it comes from.
+Each app has a minimum: a quarter of what it uses now (or normally, if it isn't running). Less could stop it from starting or keep it from working. Memory also has a Windows-level floor of 32 MB per process, so an app with many processes can have a higher minimum. If you try to save less, a notice tells you the exact minimum and where it comes from.
 
 **A yellow bar says the limits file was changed.**
 Something other than Task Manager Pro changed `limits.cfg`. Its limits are not applied until you click **Review limits** and confirm them.

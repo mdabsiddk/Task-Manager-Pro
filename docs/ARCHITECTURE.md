@@ -258,8 +258,8 @@ A system program running with a client's package identity (for example `RuntimeB
 Every notice is a toast card (`UI/Toast.cs`); there are no message boxes for information, only for questions that need an answer (Yes/No).
 
 - **Where:** bottom-right of the primary screen's work area, above the taskbar. Up to 3 cards stack, newest at the bottom.
-- **Look:** follows the theme live; rounded corners (DWM on Windows 11) and a drop shadow; header with the app icon, *Task Manager Pro*, the time left and a ✕ button; a notice icon (info, success, warning, error) inside a **countdown ring** that empties over the card's **3 minutes**.
-- **Behaviour:** `WS_EX_NOACTIVATE` + `ShowWithoutActivation`, so it never takes the focus; no taskbar button; slides in and fades out; hovering pauses the countdown (shows *paused*); ✕ or a click closes it; a click on the card can run an action (the engine's cards open the window). A card with the same key replaces the earlier one, so the limit hint for the box being edited is always a single card. The ring repaints only its own area every 100 ms.
+- **Look:** follows the theme live; rounded corners (DWM on Windows 11) and a drop shadow; header with the app icon, *Task Manager Pro*, the time left and a ✕ button; a notice icon (info, success, warning, error) inside a **countdown ring** that empties over the card's **3 seconds**.
+- **Behaviour:** `WS_EX_NOACTIVATE` + `ShowWithoutActivation`, so it never takes the focus; no taskbar button; slides in and fades out; hovering pauses the countdown (shows *paused*); ✕ or a click closes it; a click on the card can run an action (the engine's cards open the window). A card with the same key replaces the earlier one, so repeated "Limit not saved" notices stay a single card. The ring repaints only its own area every 30 ms.
 - **From the engine:** the engine has no WinForms, so it starts `TaskManagerPro.exe --toast <kind> "<title>" "<text>"`, a short-lived process that exits when its card closes. `--restore-all` confirms with a card the same way.
 
 ### Header totals

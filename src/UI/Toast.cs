@@ -19,16 +19,16 @@ namespace TaskManagerPro
     /// <summary>
     /// The one way Task Manager Pro shows a notice: a card in the bottom-right corner, above the
     /// taskbar, in the current theme. A ring around the notice icon counts down the time the card stays
-    /// (3 minutes; paused while the mouse is over the card), and the ✕ button closes it at once.
+    /// (3 seconds; paused while the mouse is over the card), and the ✕ button closes it at once.
     /// Cards never take the focus from what the user is doing. Up to three are stacked; a notice with
     /// the same key replaces the earlier one (for example the hint for the limit being edited).
     /// Must be called on a UI thread; the background engine uses "--toast" (<see cref="RunStandalone"/>).
     /// </summary>
     internal sealed class Toast : Form
     {
-        public static readonly TimeSpan DefaultDuration = TimeSpan.FromMinutes(3);
+        public static readonly TimeSpan DefaultDuration = TimeSpan.FromSeconds(3);
         private const int MaxVisible = 3;
-        private const int TickMs = 100;
+        private const int TickMs = 30;    // smooth ring over a 3-second card
         private const int AnimationMs = 180;
 
         private static readonly List<Toast> open = new List<Toast>();
@@ -396,7 +396,7 @@ namespace TaskManagerPro
             TextRenderer.DrawText(g, Program.AppName, captionFont, new Rectangle(S(40), S(4), S(200), S(30)), p.SubText,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
             TimeSpan left = remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
-            string time = ((int)left.TotalMinutes).ToString() + ":" + left.Seconds.ToString("00");
+            string time = ((int)Math.Ceiling(left.TotalSeconds)).ToString() + "s";
             TextRenderer.DrawText(g, hovered ? "paused" : time, captionFont, timeBox, p.SubText,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.Right | TextFormatFlags.NoPrefix);
             if (closeHovered)
