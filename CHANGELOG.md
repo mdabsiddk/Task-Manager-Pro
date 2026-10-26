@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.5.6 (2026-10-27)
+
+- **One minimum for memory limits: 20 MB, the same for every app.** The 20 MB-per-process rule, the 64 MB per-app rule and the quarter-of-use rule no longer apply to memory (they still apply to CPU, disk and network). The notice just says *The lowest memory limit is 20 MB.* A hard cap on one process is never set below 2 MB.
+
 ## 2.5.5 (2026-10-27)
 
 - **Memory floor per process is now 20 MB** (was 32 MB), the same for every app. Electron with 4 processes can now be limited to 100 MB (lowest 80 MB). Windows itself has no such floor: hard caps down to 1 MB were accepted in a test.

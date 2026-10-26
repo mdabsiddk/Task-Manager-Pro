@@ -25,7 +25,7 @@ namespace TaskManagerPro
         private const uint AccessRights = NativeMethods.PROCESS_QUERY_INFORMATION | NativeMethods.PROCESS_SET_INFORMATION
                                         | NativeMethods.PROCESS_SET_QUOTA | NativeMethods.PROCESS_TERMINATE
                                         | NativeMethods.PROCESS_DUP_HANDLE;
-        private const long MinWorkingSetBytes = LimitPolicy.MinMemoryPerProcessMB * 1024L * 1024L; // never squeeze a process below this
+        private const long MinWorkingSetBytes = 2L * 1024 * 1024; // a hard cap is never set below 2 MB per process
         private const double Hysteresis = 0.8;                    // stop throttling below 80% of the limit
         private const double MemoryTolerance = 0.01;              // ignore cap changes smaller than 1%
         private const int IoVeryLow = 0, IoLow = 1, IoNormal = 2;

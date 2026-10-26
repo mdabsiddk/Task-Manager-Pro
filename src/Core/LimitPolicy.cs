@@ -17,16 +17,17 @@ namespace TaskManagerPro
         /// <summary>Number of processes the memory floor was counted for.</summary>
         public int Processes;
         /// <summary>True where the app's own use set the floor; false where the Windows-level floor did.</summary>
-        public bool CpuFromUse, MemoryFromUse, DiskFromUse, NetFromUse;
+        public bool CpuFromUse, DiskFromUse, NetFromUse;
     }
 
     /// <summary>
     /// Safety floors for limits. Every app needs some CPU, memory, disk and network to start and stay
     /// responsive, and that amount is different for every app, so the floor is computed from the app's
-    /// own data rather than from a fixed list: a limit can never be lower than A QUARTER of what the app
-    /// uses right now (while it runs without a limit), or else of what it normally uses (learned while
+    /// own data rather than from a fixed list: a CPU, disk or network limit can never be lower than A QUARTER
+    /// of what the app uses right now (while it runs without a limit), or else of what it normally uses (learned while
     /// it runs without a limit, see <see cref="AppProfileStore"/>). Before
-    /// there is any data, only Windows-level floors apply (half a logical processor, 20 MB per process).
+    /// there is any data, only Windows-level floors apply (half a logical processor). The memory limit
+    /// has one minimum for every app: 20 MB.
     /// The floors are enforced for limits typed in the window, for limits.cfg on every load (so a
     /// tampered file can't starve an app) and inside the governor itself.
     /// </summary>
@@ -36,8 +37,7 @@ namespace TaskManagerPro
         public const double ShareOfTypicalUse = 0.25;
 
         // Windows-level floors: what any process needs, independent of the app.
-        public const int MinMemoryPerProcessMB = 20;
-        public const int BasicMemoryMB = 64;
+        public const int MinMemoryMB = 20;               // the only minimum for a memory limit, for every app
         public const int BasicDiskMBps = 1;
         public const int BasicNetKBps = 30;              // ≈ 0.25 Mbps: enough to stay connected
 
@@ -65,7 +65,7 @@ namespace TaskManagerPro
             var f = new LimitFloors
             {
                 CpuPercent = BasicCpuPercent,
-                MemoryMB = Math.Max(BasicMemoryMB, MinMemoryPerProcessMB * processes),
+                MemoryMB = MinMemoryMB,
                 DiskMBps = BasicDiskMBps,
                 NetKBps = BasicNetKBps,
                 Basis = "basic",
@@ -95,15 +95,12 @@ namespace TaskManagerPro
             }
 
             f.TypicalMemoryMB = (int)Math.Round(mem);
-            int memFromUse = RoundUp(mem * ShareOfTypicalUse, 8);
             int cpuFromUse = (int)Math.Ceiling(cpu * ShareOfTypicalUse);
             int diskFromUse = (int)Math.Ceiling(disk * ShareOfTypicalUse);
             int netFromUse = (int)Math.Ceiling(net * ShareOfTypicalUse);
-            f.MemoryFromUse = memFromUse > f.MemoryMB;
             f.CpuFromUse = cpuFromUse > f.CpuPercent;
             f.DiskFromUse = diskFromUse > f.DiskMBps;
             f.NetFromUse = netFromUse > f.NetKBps;
-            f.MemoryMB = Math.Min(MaxMemoryMB, Math.Max(f.MemoryMB, memFromUse));
             f.CpuPercent = Math.Min(100, Math.Max(f.CpuPercent, cpuFromUse));
             f.DiskMBps = Math.Max(f.DiskMBps, diskFromUse);
             f.NetKBps = Math.Max(f.NetKBps, netFromUse);
@@ -143,14 +140,7 @@ namespace TaskManagerPro
         {
             if (mb == 0) return null;
             if (mb > MaxMemoryMB) return "That memory limit is too large.";
-            if (mb < f.MemoryMB)
-            {
-                string windows = f.Processes > 1 && MinMemoryPerProcessMB * f.Processes > BasicMemoryMB
-                    ? MinMemoryPerProcessMB + " MB for each of its " + f.Processes + " processes"
-                    : "the least any app needs";
-                return "The lowest memory limit for " + app + " is " + f.MemoryMB.ToString("#,0", CultureInfo.InvariantCulture) + " MB ("
-                       + Reason(f, f.MemoryFromUse, windows) + ").";
-            }
+            if (mb < f.MemoryMB) return "The lowest memory limit is " + f.MemoryMB + " MB.";
             return null;
         }
 
