@@ -52,7 +52,7 @@ namespace TaskManagerPro
         private bool hovered, closeHovered, closing;
         private DateTime animationStart;
         private int targetY;
-        private Rectangle closeBox, ringBox, timeBox;
+        private Rectangle closeBox, ringBox;
 
         /// <summary>Shows a notice with the default 3-minute duration.</summary>
         public static Toast Show(string title, string message, ToastKind kind)
@@ -274,7 +274,7 @@ namespace TaskManagerPro
                 Dismiss(true);
                 return;
             }
-            Invalidate(Rectangle.Union(ringBox, timeBox));
+            Invalidate(ringBox);
         }
 
         private void OnThemeChanged(object sender, EventArgs e)
@@ -352,7 +352,6 @@ namespace TaskManagerPro
         {
             closeBox = new Rectangle(Width - S(40), S(4), S(34), S(30));
             ringBox = new Rectangle(S(16), S(38), S(44), S(44));
-            timeBox = new Rectangle(closeBox.Left - S(48), S(4), S(46), S(30));
         }
 
         private Color KindColor(Palette p)
@@ -391,14 +390,11 @@ namespace TaskManagerPro
             using (var border = new Pen(p.IsDark ? Color.FromArgb(70, 70, 70) : Color.FromArgb(222, 222, 222)))
                 g.DrawRectangle(border, 0, 0, Width - 1, Height - 1);
 
-            // Header: app icon, app name, time left, close button.
+            // Header: app icon, app name, close button. The time left is shown only by the ring.
             if (appIcon != null) g.DrawImage(appIcon, S(16), S(11), S(16), S(16));
             TextRenderer.DrawText(g, Program.AppName, captionFont, new Rectangle(S(40), S(4), S(200), S(30)), p.SubText,
                 TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
             TimeSpan left = remaining < TimeSpan.Zero ? TimeSpan.Zero : remaining;
-            string time = ((int)Math.Ceiling(left.TotalSeconds)).ToString() + "s";
-            TextRenderer.DrawText(g, hovered ? "paused" : time, captionFont, timeBox, p.SubText,
-                TextFormatFlags.VerticalCenter | TextFormatFlags.Right | TextFormatFlags.NoPrefix);
             if (closeHovered)
             {
                 using (var hover = new SolidBrush(p.IsDark ? Color.FromArgb(62, 62, 62) : Color.FromArgb(234, 234, 234)))

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.3 (2026-10-27)
+
+- Memory caps are lifted completely when the app drops below **80%** of its limit (was 20%; 70% in 2.5.0).
+- Notice cards show only the ring animation: the number of seconds left is gone.
+
 ## 2.5.2 (2026-10-27)
 
 - Notice cards stay **3 seconds** (was 3 minutes); the ring around the icon counts the seconds down smoothly, and hovering still pauses it.

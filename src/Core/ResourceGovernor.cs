@@ -27,7 +27,7 @@ namespace TaskManagerPro
                                         | NativeMethods.PROCESS_DUP_HANDLE;
         private const long MinWorkingSetBytes = LimitPolicy.MinMemoryPerProcessMB * 1024L * 1024L; // never squeeze a process below this
         private const double Hysteresis = 0.8;                    // stop throttling below 80% of the limit
-        private const double MemoryRelease = 0.20;                // lift the memory caps below 20% of the limit
+        private const double MemoryRelease = 0.80;                // lift the memory caps below 80% of the limit
         private const double MemoryTolerance = 0.01;              // ignore cap changes smaller than 1%
         private const int IoVeryLow = 0, IoLow = 1, IoNormal = 2;
 
@@ -356,7 +356,7 @@ namespace TaskManagerPro
         ///    to the whole limit: above it they shrink the app back, below it they grow and leave room.
         ///    The caps only bite when the app tries to go over its limit; it is never held below it.
         ///    New processes start free and are included at the next check.
-        ///  - Below 20% of the limit the caps are lifted completely.
+        ///  - Below 80% of the limit the caps are lifted completely.
         /// Returns the wanted maximum in bytes, 0 = no cap.
         /// </summary>
         private static long MemoryCap(GroupState gs, ProcState st, ProcInfo p, double scale)
