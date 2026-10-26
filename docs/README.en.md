@@ -180,7 +180,7 @@ The output goes to `build\TaskManagerPro.exe` (plus `TaskManagerPro.exe.config`)
 
 Invalid input is rejected with a message, and nothing is saved:
 - letters, negative numbers, or CPU over 100%
-- **a value below the app's own minimum.** The notice names the exact minimum and why, for example: *"The lowest memory limit for Electron is 128 MB (32 MB for each of its 4 processes)."* or *"The lowest memory limit for Everything is 400 MB (a quarter of what it uses now)."*
+- **a value below the app's own minimum.** The notice names the exact minimum and why, for example: *"The lowest memory limit for Electron is 80 MB (20 MB for each of its 4 processes)."* or *"The lowest memory limit for Everything is 400 MB (a quarter of what it uses now)."*
 
 Messages appear as a notice card in the bottom-right corner. A ring around its icon shows how long it stays (3 seconds; it waits while the mouse is over the card); ✕ closes it.
 
@@ -257,7 +257,7 @@ We can't know in advance which apps someone uses, so there is **no fixed list of
 - **No limit can go below a quarter of what the app uses.** While it runs without a limit, its use right now counts; otherwise its learned normal use. Example: if Chrome uses about 1,240 MB now, its memory limit can't be set below 310 MB.
 - With no data at all, only the Windows-level floors apply:
   - CPU: half of one logical processor
-  - memory: 32 MB per process (at least 64 MB)
+  - memory: 20 MB per process (at least 64 MB)
   - disk: 1 MB/s
   - network: about 0.25 Mbps
 - **These minimums are enforced everywhere:**
@@ -414,7 +414,7 @@ Yes. At sign-in Windows starts the small engine (only when limits are set), whic
 Some processes (for example anti-virus) are protected by Windows itself. No task manager can change them.
 
 **Why can't I set a lower limit?**
-Each app has a minimum: a quarter of what it uses now (or normally, if it isn't running). Less could stop it from starting or keep it from working. Memory also has a Windows-level floor of 32 MB per process, so an app with many processes can have a higher minimum. If you try to save less, a notice tells you the exact minimum and where it comes from.
+Each app has a minimum: a quarter of what it uses now (or normally, if it isn't running). Less could stop it from starting or keep it from working. Memory also has a Windows-level floor of 20 MB per process, so an app with many processes can have a higher minimum. If you try to save less, a notice tells you the exact minimum and where it comes from.
 
 **A yellow bar says the limits file was changed.**
 Something other than Task Manager Pro changed `limits.cfg`. Its limits are not applied until you click **Review limits** and confirm them.

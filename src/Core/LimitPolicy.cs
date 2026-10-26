@@ -26,7 +26,7 @@ namespace TaskManagerPro
     /// own data rather than from a fixed list: a limit can never be lower than A QUARTER of what the app
     /// uses right now (while it runs without a limit), or else of what it normally uses (learned while
     /// it runs without a limit, see <see cref="AppProfileStore"/>). Before
-    /// there is any data, only Windows-level floors apply (half a logical processor, 32 MB per process).
+    /// there is any data, only Windows-level floors apply (half a logical processor, 20 MB per process).
     /// The floors are enforced for limits typed in the window, for limits.cfg on every load (so a
     /// tampered file can't starve an app) and inside the governor itself.
     /// </summary>
@@ -36,7 +36,7 @@ namespace TaskManagerPro
         public const double ShareOfTypicalUse = 0.25;
 
         // Windows-level floors: what any process needs, independent of the app.
-        public const int MinMemoryPerProcessMB = 32;
+        public const int MinMemoryPerProcessMB = 20;
         public const int BasicMemoryMB = 64;
         public const int BasicDiskMBps = 1;
         public const int BasicNetKBps = 30;              // ≈ 0.25 Mbps: enough to stay connected

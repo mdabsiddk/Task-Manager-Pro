@@ -85,7 +85,7 @@ The engine is started by a Task Scheduler sign-in task with *highest privileges*
 | CPU | Named Job Object `Local\TaskManagerPro.Job.<app>` with `JOB_OBJECT_CPU_RATE_CONTROL_ENABLE \| HARD_CAP`, `CpuRate = % × 100`. Child processes join automatically. Nested jobs work on Windows 8+. | Cap removed; a job without limits has no effect |
 | CPU (fallback) | Core affinity: `floor(% × cores)` cores, at least one | Original mask |
 | CPU / disk | `BELOW_NORMAL` priority; `IDLE` while over the limit (80% hysteresis, window only) | Original priority class |
-| Memory | One budget for the whole app (see *Memory budget* below): no cap below the limit; above it `SetProcessWorkingSetSizeEx(..., MAX_ENABLE)` per process, shared out in proportion to use (at least 32 MB) | Original min/max and flags |
+| Memory | One budget for the whole app (see *Memory budget* below): no cap below the limit; above it `SetProcessWorkingSetSizeEx(..., MAX_ENABLE)` per process, shared out in proportion to use (at least 20 MB) | Original min/max and flags |
 | Disk | `NtSetInformationProcess(ProcessIoPriority)`: Low (1), Very low (0) while over the limit | Original I/O priority |
 
 Rules:
@@ -100,7 +100,7 @@ The memory limit applies to the app's **total** private working set (the Memory 
 | App's total | What happens |
 |---|---|
 | never above the limit yet | no cap: the app runs at full speed |
-| once above the limit | each process gets a hard working-set maximum of `its working set × limit ÷ app total` (at least 32 MB), recomputed at every check. The caps always add up to the whole limit: above it they shrink the app back, below it they grow and leave room. So they only bite when the app tries to go over its limit, and the app is never held below it. Changes under 1% are skipped. |
+| once above the limit | each process gets a hard working-set maximum of `its working set × limit ÷ app total` (at least 20 MB), recomputed at every check. The caps always add up to the whole limit: above it they shrink the app back, below it they grow and leave room. So they only bite when the app tries to go over its limit, and the app is never held below it. Changes under 1% are skipped. |
 | any total, while the limit exists | the caps stay (they are not lifted, so the app can't jump over the limit and be pulled back); removing the limit or pausing lifts them |
 
 The window re-checks with every refresh, and the engine every 5 seconds while a memory limit exists (one sample, about 5 ms).
@@ -163,7 +163,7 @@ In every case the floor is at least the Windows-level floor:
 | Resource | Windows-level floor |
 |---|---|
 | CPU | ½ logical processor |
-| Memory | 32 MB × processes (at least 64 MB) |
+| Memory | 20 MB × processes (at least 64 MB) |
 | Disk | 1 MB/s |
 | Network | 30 KB/s (about 0.25 Mbps) |
 
@@ -172,7 +172,7 @@ In every case the floor is at least the Windows-level floor:
 - on every load
 - in `LimitController.SetRule`
 
-The governor also never sets a job cap below ½ core or a working set below 32 MB per process.
+The governor also never sets a job cap below ½ core or a working set below 20 MB per process. (Windows itself has no such floor: it accepted hard caps down to 1 MB in a test.)
 
 **Locked data folder.** `AppPaths.EnsureDataDir` runs at window and engine start:
 - It sets a protected DACL on `%ProgramData%\TaskManagerPro`: SYSTEM and Administrators get full control, with no inheritance from ProgramData. (ProgramData normally lets *Users* create files in sub-folders.)
